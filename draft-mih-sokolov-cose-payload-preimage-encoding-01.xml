@@ -37,22 +37,22 @@
     <keyword>canonicalization</keyword>
     <keyword>deterministic encoding</keyword>
     <abstract>
-      <?line 56?>
+      <?line 55?>
 
-<t>The COSE Hash Envelope carries the hash of content held elsewhere. When that
-content is structured, more than one deterministic serialization of it may be
-in use, and the Hash Envelope does not identify which one produced the hashed
-bytes -- so a verifier cannot reliably recompute the hash. This document
-defines a protected-header parameter, payload-preimage-encoding, that names
-the deterministic encoding a producer applied before hashing a Hash Envelope
-payload, and a small IANA registry of deterministic encoding identifiers,
-populated at issuance with an entry for the Core Deterministic Encoding
-Requirements of RFC 8949.
-It extends the COSE Hash Envelope through the existing extension point.</t>
+<t>A COSE Hash Envelope carries the hash of a preimage held elsewhere. When
+structured content is serialized into a preimage, the Hash Envelope does not
+capture the specific encoding algorithm that was used. A verifier who has
+access to the content, but not to the preimage itself, is therefore unable
+to reliably confirm that this content matches the hash. This document
+defines an extension to COSE Hash Envelope: an additional protected-header
+parameter (payload-preimage-encoding) which captures the specific encoding a
+producer applied to create the preimage, and a small IANA registry of
+encoding identifiers whose initial entry is the Core Deterministic Encoding
+Requirements of RFC 8949.</t>
     </abstract>
     <note>
       <name>Note to Readers</name>
-      <?line 69?>
+      <?line 68?>
 
 <t>This document is an individual submission; the intended working group is the
 COSE Working Group (cose@ietf.org). <strong>This revision is a draft for co-author and working-group
@@ -60,23 +60,27 @@ review only; it has not been submitted to the datatracker.</strong></t>
     </note>
   </front>
   <middle>
-    <?line 75?>
+    <?line 74?>
 
 <section anchor="intro">
       <name>Introduction</name>
-      <t>Structured content commonly has more than one deterministic serialization
-in use. The COSE Hash Envelope <xref target="RFC9995"/> identifies the hash function
-(258) and the content type of the hashed bytes (259), but not which of those
-serializations produced them -- which a verifier needs to recompute the hash
-of structured content, such as CBOR, and compare it to the payload.</t>
+      <t>Structured content formats often do not mandate a single deterministic
+encoding algorithm, with the result that the same entity can be represented
+by more than one sequence of serialized bytes. The COSE Hash Envelope
+<xref target="RFC9995"/> format identifies the hash function (258) and the content type
+of the preimage (259), but not which specific encoding produced it for
+structured content. A verifier that holds the preimage bytes can hash them
+and compare the result to the payload (<xref target="RFC9995"/> Section 5.3), but a
+verifier that holds structured content, such as CBOR, only in decoded form
+has to re-encode it first, and needs to know which specific algorithm to
+use.</t>
       <t>This document defines one new protected-header parameter,
-payload-preimage-encoding, naming that deterministic encoding, and a small
-IANA registry of encoding identifiers. It changes nothing in <xref target="RFC9995"/>: the
-Hash Envelope protected header already admits extension parameters through its
-open CDDL member (<tt>* (int / tstr) =&gt; any</tt>), and this document adds a value
-through that existing extension point. It names the deterministic encoding a
-producer applied before hashing a Hash Envelope payload. The SCITT Signed
-Statement <xref target="RFC9943"/> is one principal user of the Hash Envelope.</t>
+payload-preimage-encoding, which captures that deterministic encoding, and a
+small IANA registry of encoding identifiers. The Hash Envelope protected
+header as specified in <xref section="4" sectionFormat="of" target="RFC9995"/> admits extension parameters
+(<tt>* (int / tstr) =&gt; any</tt>), and this document defines an additional parameter
+through that existing extension point. The SCITT Signed Statement <xref target="RFC9943"/>
+is one principal user of the Hash Envelope.</t>
     </section>
     <section anchor="terminology">
       <name>Terminology</name>
@@ -87,65 +91,153 @@ Statement <xref target="RFC9943"/> is one principal user of the Hash Envelope.</
 shown here.</t>
       <t>"COSE", "COSE_Sign1", and "protected header" are defined in <xref target="RFC9052"/>;
 "CDDL" in <xref target="RFC8610"/>; "Hash Envelope" and "preimage" in <xref target="RFC9995"/>.
-The Hash Envelope labels this document builds on are 258 (payload-hash-alg)
-and 259 (preimage-content-type).</t>
+As in <xref target="RFC9995"/>, the payload of a Hash Envelope is a digest, and the
+preimage is the octet string that was hashed to produce it.
+The Hash Envelope labels this document builds on are 258 (payload-hash-alg),
+259 (preimage-content-type), and 260 (payload-location).</t>
+      <t>This document also uses the following terms:</t>
+      <dl>
+        <dt>Structured value:</dt>
+        <dd>
+          <t>A value with internal structure, such as a CBOR data item, that a
+deterministic encoding serializes to create a preimage.</t>
+        </dd>
+        <dt>Content binding:</dt>
+        <dd>
+          <t>The correspondence between content a verifier holds -- a preimage, or a
+structured value -- and the payload of a Hash Envelope. A verifier that
+checks a content binding reports one of three outcomes: verified, failed,
+or unverified.</t>
+        </dd>
+        <dt>Verified:</dt>
+        <dd>
+          <t>The verifier hashed the preimage -- as held, or as re-created from a
+structured value -- with the payload-hash-alg (258) algorithm and obtained
+the payload, and did not find the protected header inconsistent
+(<xref target="consistency"/>).</t>
+        </dd>
+        <dt>Failed:</dt>
+        <dd>
+          <t>The verifier found the protected header inconsistent (<xref target="consistency"/>),
+or hashed the preimage, as held or as re-created, and obtained a value
+other than the payload.</t>
+        </dd>
+        <dt>Unverified:</dt>
+        <dd>
+          <t>Any other case; in particular, the verifier could not perform the
+comparison because it holds neither the preimage nor the information
+needed to re-create it (<xref target="verification"/>).</t>
+        </dd>
+      </dl>
+      <t>These outcomes concern the content binding only; signature validity is
+determined independently of them (<xref target="verification"/>).</t>
     </section>
     <section anchor="header-param">
       <name>The payload-preimage-encoding Header Parameter</name>
       <t>This document defines the parameter as:</t>
       <dl>
-        <dt>TBD:</dt>
+        <dt>TBD_1:</dt>
         <dd>
-          <t>payload-preimage-encoding. The deterministic encoding applied to
-structured content to produce the octets identified by
-preimage-content-type (259) and hashed to produce the payload identified
-by payload-hash-alg (258). The value is the integer Value (not the Name)
-assigned to an encoding in the COSE Deterministic Encodings registry
-(<xref target="iana-encodings"/>).</t>
+          <t>payload-preimage-encoding. The deterministic encoding applied to a
+structured value to create the preimage, which has the content type given
+by preimage-content-type (259) and was hashed with the payload-hash-alg
+(258) algorithm to produce the payload. The value is the integer Value
+(not the Name) assigned to an encoding in the COSE Deterministic Encodings
+registry (<xref target="iana-encodings"/>).</t>
         </dd>
       </dl>
-      <t>It amends the Hash_Envelope_Protected_Header CDDL of <xref target="RFC9995"/> Section 4
-with one optional member, alongside the members for labels 258-260:</t>
+      <t>It extends <xref target="RFC9995"/> by adding one optional member to the
+Hash_Envelope_Protected_Header CDDL of <xref target="RFC9995"/> Section 4, alongside the
+members for labels 258-260. The extended rule restates the <xref target="RFC9995"/> rule
+with that member added:</t>
       <sourcecode type="cddl"><![CDATA[
-? &(payload_preimage_encoding: TBD) => int,
+Hash_Envelope_Protected_Header_With_Encoding = {
+    ? &(alg: 1) => int,
+    &(payload_hash_alg: 258) => int,
+    ? &(payload_preimage_content_type: 259) => uint / tstr,
+    ? &(payload_location: 260) => tstr,
+    ? &(payload_preimage_encoding: TBD_1) => int,
+    * (int / tstr) => any
+}
 ]]></sourcecode>
-      <t>Label TBD MAY be present in the protected header and MUST NOT be present in
-the unprotected header, following the placement rule <xref target="RFC9995"/> states for
-labels 258 through 260.</t>
+      <t>Label TBD_1 MAY be present in the protected header and MUST NOT be present
+in the unprotected header, following the placement rule <xref target="RFC9995"/> states
+for labels 258 through 260. When label TBD_1 is present,
+preimage-content-type (259) MUST also be present (<xref target="consistency"/>).</t>
     </section>
     <section anchor="behavior">
       <name>Producer and Verifier Behavior</name>
-      <t>When the preimage is structured content that was canonicalized before
-hashing, the producer MUST set payload-preimage-encoding; the value MUST be
-the encoding actually applied to produce the hashed octets.
+      <section anchor="producers">
+        <name>Producers</name>
+        <t>When a producer creates the preimage by applying a deterministic encoding to
+a structured value, it MUST include payload-preimage-encoding, and the value
+MUST identify the encoding actually applied.
 An unstructured preimage -- for example application/octet-stream, an image,
-or an archive -- has no deterministic encoding to name, and the parameter is
-simply absent.</t>
-      <t>A verifier MUST NOT infer the preimage encoding from preimage-content-type
-(259) or from the shape of the recomputed content. If
-payload-preimage-encoding is absent or carries an unrecognized value, the
-content binding cannot be verified by recomputation: the verifier MUST NOT
-report that binding as verified, and MUST report it as unverified rather
-than as failed. Unverified means the verifier lacked the information
-needed to recompute; failed means a recomputation was performed and did
-not match. A Hash Envelope sealed before this parameter was registered is
-expected to lack it, and that absence is not a defect. Signature validity
-is unaffected -- a verifier that has not established the content binding
-can still report Signature-Valid status for the COSE_Sign1 itself.</t>
-      <t>An encoding's definition constrains the preimage-content-type (259) it may
-be used with. A producer MUST NOT pair an encoding with an incompatible
-content type (for example, cde with a non-CBOR content type such as
-application/json), and a verifier MUST reject a Hash Envelope whose
-payload-preimage-encoding and preimage-content-type (259) are inconsistent.</t>
+or an archive -- has no deterministic encoding to capture, and the parameter
+is simply absent.</t>
+      </section>
+      <section anchor="consistency">
+        <name>Consistency with preimage-content-type</name>
+        <t>Each registered encoding lists the content types it applies to, as the
+Applicable Content Types of its registry entry (<xref target="iana-encodings"/>). When
+payload-preimage-encoding is present, preimage-content-type (259) MUST also
+be present, and its value MUST match one of the Applicable Content Types of
+the captured encoding:</t>
+        <ul spacing="normal">
+          <li>
+            <t>A 259 value that is a media-type name matches when its type and subtype --
+with any parameters removed, and compared case-insensitively (<xref target="RFC6838"/>
+Section 4.2) -- equal a listed media type, or when its subtype ends in a
+listed structured syntax suffix (<xref target="RFC6838"/> Section 4.2.8).</t>
+          </li>
+          <li>
+            <t>A 259 value that is a Content-Format number matches when the CoAP
+Content-Formats registry (<xref target="RFC7252"/> Section 12.3) assigns that number to
+a matching media type with no content coding.</t>
+          </li>
+        </ul>
+        <t>A producer MUST NOT emit a Hash Envelope that violates these rules -- for
+example, one pairing core-deterministic with application/json. A verifier
+that finds payload-preimage-encoding present with preimage-content-type
+(259) absent, or with a 259 value that does not match the Applicable Content
+Types of an encoding the verifier recognizes, MUST report the content
+binding as failed, without attempting recomputation. This check comes
+first, and takes precedence over <xref target="verification"/>.</t>
+      </section>
+      <section anchor="verification">
+        <name>Verifying the Content Binding</name>
+        <t>A verifier that holds the preimage itself -- for example, as retrieved from
+payload-location (260) -- checks the content binding as <xref target="RFC9995"/>
+Section 5.3 describes: it hashes the preimage with the payload-hash-alg (258)
+algorithm and compares the result to the payload. That check needs no
+encoding information, and applies whether or not payload-preimage-encoding
+is present, subject to <xref target="consistency"/>.</t>
+        <t>A verifier that holds only a structured value -- for example, content it
+received, stored, or decoded in a form other than the preimage itself --
+has to re-create the preimage by encoding that value, and needs
+payload-preimage-encoding to do so. Such a verifier MUST encode the value
+with the encoding the parameter captures, and MUST NOT infer the encoding
+from preimage-content-type (259) or from the structure of the value. If
+payload-preimage-encoding is absent, or carries a value the verifier does
+not recognize or implement, the verifier cannot re-create the preimage: it
+MUST NOT report the content binding as verified, and MUST report it as
+unverified rather than as failed.</t>
+        <t>A Hash Envelope produced without this parameter -- including any produced
+before the parameter was registered -- is not defective: its content binding
+can still be verified from the preimage octets. Signature validity is
+unaffected by any content-binding outcome: a verifier that has not
+established the content binding can still validate the signature of the
+COSE_Sign1 as specified in <xref target="RFC9052"/>.</t>
+      </section>
     </section>
     <section anchor="examples">
       <name>Examples</name>
       <t>These use Extended Diagnostic Notation (<xref target="RFC8610"/> Appendix G), in the
 style of <xref target="RFC9995"/> Section 4.1; signature and key material are truncated.</t>
-      <t>The preimage <tt>{"b": 2, "a": 1}</tt>, encoded per the Core Deterministic
-Encoding Requirements of <xref target="RFC8949"/> Section 4.2.1 (bytewise key order,
-placing "a" before "b"), is the 7-octet string <tt>a2616101616202</tt>, whose
-SHA-256 digest is
+      <t>The structured value <tt>{"b": 2, "a": 1}</tt>, a CBOR map, encoded per the Core
+Deterministic Encoding Requirements of <xref target="RFC8949"/> Section 4.2.1 (bytewise
+key order, placing "a" before "b"), gives the 7-octet preimage
+<tt>a2616101616202</tt>, whose SHA-256 digest is
 <tt>a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3</tt>:</t>
       <artwork><![CDATA[
 18([ # COSE_Sign1
@@ -153,7 +245,7 @@ SHA-256 digest is
     / alg               / 1: -7, # ES256
     / hash algorithm    / 258: -16, # sha-256
     / preimage type     / 259: "application/cbor",
-    / preimage encoding / TBD: 1, # cde
+    / preimage encoding / TBD_1: 1, # core-deterministic
   }>>
   / unprotected / {},
   / payload     / h'a0d3af9e...c893b5e3', # digest above
@@ -162,39 +254,62 @@ SHA-256 digest is
 ]]></artwork>
       <section anchor="examples-deployed">
         <name>Where These Encodings Already Apply</name>
-        <t>The entry in the registry (<xref target="iana-encodings"/>) is not hypothetical; it names an
-encoding that a deployed specification, in a domain unrelated to the one that
-motivated this document, already applies before hashing or signing structured
-content.</t>
-        <t>cde: <xref target="C2PASpec"/> Section 10.1 states that a C2PA claim is encoded as CBOR and,
-as such, "shall comply with the Core Deterministic Encoding Requirements of
-CBOR (see RFC 8949, clause 4.2.1)" before it is hashed into the claim
-signature. A Hash Envelope carrying such a claim as its preimage would set
-payload-preimage-encoding to cde (Value 1) for exactly the reason <xref target="C2PASpec"/>
-imposes that requirement: a verifier recomputing the claim's hash has to know
-which deterministic encoding produced the bytes it is re-deriving.</t>
-        <t>cde: <xref target="VTOSpec"/>, an in-progress libp2p specification for the Verified
-Telemetry Object (VTO), encodes each telemetry object with "definite-length
-CBOR maps, deterministic key ordering by encoded-key bytes, IEEE 754 binary64
-floats, and SHA-256 multihashes over the raw CBOR item" -- the Core
-Deterministic Encoding Requirements of <xref target="RFC8949"/> Section 4.2.1 applied
-before hashing. A producer emitting a VTO as a Hash Envelope preimage would set
-payload-preimage-encoding to cde (Value 1), because VTO already encodes its
-telemetry objects with that deterministic CBOR encoding before hashing, and a
-verifier re-deriving the SHA-256 over the raw CBOR item has to know it.</t>
+        <t>The entry in the registry (<xref target="iana-encodings"/>) is not hypothetical. The two
+examples below show a producer applying it in domains unrelated to the one
+that motivated this document -- one where the underlying format does not
+itself require a deterministic encoding, so the producer's choice is exactly
+what payload-preimage-encoding exists to record, and one where the underlying
+format already requires this deterministic encoding, so the parameter just
+names what the format already does.</t>
+        <t><xref target="RFC9393"/> defines the Concise Software Identity (CoSWID) tag
+(concise-swid-tag) and registers application/swid+cbor as its CBOR media type
+(<xref target="RFC9393"/> Section 6.3), but does not require any particular deterministic
+or canonical CBOR encoding of a CoSWID tag: two producers may serialize the
+same tag as different, equally valid, byte sequences. A producer that chooses
+to apply the Core Deterministic Encoding Requirements of <xref target="RFC8949"/> Section
+4.2.1 to a CoSWID tag before hashing it into a Hash Envelope sets
+preimage-content-type (259) to application/swid+cbor and
+payload-preimage-encoding to core-deterministic (Value 1) -- recording its
+own choice, not a CoSWID requirement -- so that a verifier recomputing the
+hash from the decoded tag knows which encoding to apply. A producer that does
+not apply that encoding, or that relies on some other canonicalization, has
+no basis to set payload-preimage-encoding to core-deterministic, and simply
+omits the parameter.</t>
+        <t><xref target="VTOSpec"/>, an in-progress libp2p specification for the Verified Telemetry
+Object (VTO), requires that the CBOR digest input for a VTO object be
+definite-length, use unique map keys ordered by the lexicographic byte order
+of their UTF-8 encodings, encode integers in shortest form, and encode
+floating-point fields as IEEE 754 binary64 -- together the Core Deterministic
+Encoding Requirements of <xref target="RFC8949"/> Section 4.2.1, applied before hashing. A
+producer emitting a VTO object as a Hash Envelope preimage would set
+preimage-content-type (259) to application/cbor and payload-preimage-encoding
+to core-deterministic (Value 1), because VTO already requires that
+deterministic CBOR encoding before hashing, and a verifier re-deriving the
+digest over the raw CBOR item has to know it.</t>
       </section>
     </section>
     <section anchor="security">
       <name>Security Considerations</name>
       <section anchor="security-bytes">
         <name>Preimages Are Bytes, Not Renderings</name>
-        <t>The preimage identified by 259 and encoded per TBD is the exact octet
-string the named encoding produces -- not a rendered form or a string
-differing from it by whitespace, newlines, or character-encoding choices.</t>
-        <t>A producer that re-reads stored content before hashing MUST ensure the
-octets entering the hash function are byte-identical to the encoding's own
-output; a deserialize-then-reserialize round trip is not guaranteed to
-reproduce it, even for deterministic encodings (<xref target="iana-encodings"/>).</t>
+        <t>The preimage is the exact octet string that the encoding captured by TBD_1
+produces -- not a rendered form or a string differing from it by whitespace,
+newlines, or character-encoding choices.</t>
+        <t>A deterministic encoding fixes the preimage for a given structured value, so
+decoding a preimage and encoding the result again reproduces the preimage
+only if decoding preserved that value exactly. Decoding into a programming
+language's native types can lose distinctions the encoding depends on -- for
+example, between integer and floating-point numbers, or the presence of a
+tag. The core deterministic encoding requirements of <xref target="RFC8949"/> Section
+4.2.1 also leave some choices to each application, such as those <xref target="RFC8949"/>
+Section 4.2.2 describes for tags, large integers, and floating-point values;
+those choices belong to the structured value, not to the encoding this
+parameter captures. A producer that re-reads stored content before hashing
+MUST ensure the preimage it hashes is byte-identical to the encoding's own
+output. A verifier that re-creates a preimage from a structured value
+(<xref target="verification"/>) needs that value exactly as the producer encoded it;
+otherwise its recomputed digest can differ from the payload, and the content
+binding is then reported as failed.</t>
         <t>Likewise, the Hash Envelope payload is the raw digest octets the hash
 function (258) produces, not a textual representation of that digest.
 Whether a digest is rendered -- for example as 64-character lowercase
@@ -205,7 +320,7 @@ document.</t>
         <name>Encoding Agility</name>
         <t>The COSE Deterministic Encodings registry (<xref target="iana-encodings"/>) grows by
 registering a new value for a new encoding, never by reinterpreting the
-octets an existing value governs; each entry's definition, once registered,
+preimages an existing value governs; each entry's definition, once registered,
 is immutable. A registered value MAY be withdrawn through the same Specification Required
 review. Withdrawal is terminal: the token stays bound, no definition is ever
 assigned or reassigned to it, and the value is not reused.</t>
@@ -215,11 +330,11 @@ assigned or reassigned to it, and the value is not reused.</t>
       <name>Privacy Considerations</name>
       <t>A digest over deterministically encoded content is a stable function of
 that content, making the payload linkable across contexts where it recurs.
-When the preimage is drawn from a low-entropy value space, encoding a
-candidate under the named encoding and hashing it with 258 can recover the preimage by
-comparison to the payload -- a risk that already exists wherever <xref target="RFC9995"/>
-is used; naming the encoding removes ambiguity that might have slowed such an
-attempt.</t>
+When the structured value is drawn from a low-entropy value space, applying
+the captured encoding to a candidate value and hashing the result with 258
+can recover the value by comparison to the payload -- a risk that already
+exists wherever <xref target="RFC9995"/> is used; capturing the encoding removes
+ambiguity that might have slowed such an attempt.</t>
     </section>
     <section anchor="iana">
       <name>IANA Considerations</name>
@@ -243,10 +358,10 @@ governs that range:</t>
           <tbody>
             <tr>
               <td align="left">payload-preimage-encoding</td>
-              <td align="left">TBD (requested)</td>
+              <td align="left">TBD_1 (requested)</td>
               <td align="left">int</td>
               <td align="left">COSE Deterministic Encodings (<xref target="iana-encodings"/>)</td>
-              <td align="left">Encoding applied before hashing a Hash Envelope payload</td>
+              <td align="left">Deterministic encoding applied to create the preimage of a Hash Envelope payload</td>
               <td align="left">This document</td>
             </tr>
           </tbody>
@@ -269,7 +384,9 @@ RFC 8949 Section 4.2.1 defines, is an anticipated future registration.
 Specification Required keeps each addition reviewed and immutable.
 Registration policy: Specification Required (<xref target="RFC8126"/> Section 4.6), with
 Designated Expert review. Registration template: Value, Name, Description,
-Applicable Content Types, Reference. Initial contents:</t>
+Applicable Content Types, Reference. Applicable Content Types lists media
+types and structured syntax suffixes, which are matched against
+preimage-content-type (259) as <xref target="consistency"/> specifies. Initial contents:</t>
         <table>
           <thead>
             <tr>
@@ -283,17 +400,22 @@ Applicable Content Types, Reference. Initial contents:</t>
           <tbody>
             <tr>
               <td align="left">1</td>
-              <td align="left">cde</td>
+              <td align="left">core-deterministic</td>
               <td align="left">CBOR deterministic encoding per the core deterministic encoding requirements of RFC 8949 Section 4.2.1</td>
-              <td align="left">CBOR content types, such as application/cbor</td>
+              <td align="left">application/cbor, application/cbor-seq, application/cose, application/cose-key, application/cose-key-set, application/cose-x509, application/cwt; media types with the +cbor, +cbor-seq, +cose, or +cwt structured syntax suffix</td>
               <td align="left">
                 <xref target="RFC8949"/> Section 4.2.1</td>
             </tr>
           </tbody>
         </table>
-        <t>Value 1, cde, is the Core Deterministic Encoding Requirements of
-<xref target="RFC8949"/> Section 4.2.1, part of STD 94.</t>
-        <t>The registry is open under the policy above, so encodings for other
+        <t>Value 1, core-deterministic, is the lead entry: the Core Deterministic
+Encoding Requirements of <xref target="RFC8949"/> Section 4.2.1, part of STD 94.
+It fixes the encoding of a given CBOR data item; the application-level
+choices that <xref target="RFC8949"/> Section 4.2.2 leaves open are not part of it
+(<xref target="security-bytes"/>).
+For a CBOR sequence <xref target="RFC8742"/>, each data item in the sequence is encoded
+according to these requirements.
+The registry is open under the policy above, so encodings for other
 structured content types can be added by later registrations, each citing
 its own reference.</t>
       </section>
@@ -330,6 +452,36 @@ its own reference.</t>
           <seriesInfo name="RFC" value="8174"/>
           <seriesInfo name="DOI" value="10.17487/RFC8174"/>
         </reference>
+        <reference anchor="RFC6838">
+          <front>
+            <title>Media Type Specifications and Registration Procedures</title>
+            <author fullname="N. Freed" initials="N." surname="Freed"/>
+            <author fullname="J. Klensin" initials="J." surname="Klensin"/>
+            <author fullname="T. Hansen" initials="T." surname="Hansen"/>
+            <date month="January" year="2013"/>
+            <abstract>
+              <t>This document defines procedures for the specification and registration of media types for use in HTTP, MIME, and other Internet protocols. This memo documents an Internet Best Current Practice.</t>
+            </abstract>
+          </front>
+          <seriesInfo name="BCP" value="13"/>
+          <seriesInfo name="RFC" value="6838"/>
+          <seriesInfo name="DOI" value="10.17487/RFC6838"/>
+        </reference>
+        <reference anchor="RFC7252">
+          <front>
+            <title>The Constrained Application Protocol (CoAP)</title>
+            <author fullname="Z. Shelby" initials="Z." surname="Shelby"/>
+            <author fullname="K. Hartke" initials="K." surname="Hartke"/>
+            <author fullname="C. Bormann" initials="C." surname="Bormann"/>
+            <date month="June" year="2014"/>
+            <abstract>
+              <t>The Constrained Application Protocol (CoAP) is a specialized web transfer protocol for use with constrained nodes and constrained (e.g., low-power, lossy) networks. The nodes often have 8-bit microcontrollers with small amounts of ROM and RAM, while constrained networks such as IPv6 over Low-Power Wireless Personal Area Networks (6LoWPANs) often have high packet error rates and a typical throughput of 10s of kbit/s. The protocol is designed for machine- to-machine (M2M) applications such as smart energy and building automation.</t>
+              <t>CoAP provides a request/response interaction model between application endpoints, supports built-in discovery of services and resources, and includes key concepts of the Web such as URIs and Internet media types. CoAP is designed to easily interface with HTTP for integration with the Web while meeting specialized requirements such as multicast support, very low overhead, and simplicity for constrained environments.</t>
+            </abstract>
+          </front>
+          <seriesInfo name="RFC" value="7252"/>
+          <seriesInfo name="DOI" value="10.17487/RFC7252"/>
+        </reference>
         <reference anchor="RFC8126">
           <front>
             <title>Guidelines for Writing an IANA Considerations Section in RFCs</title>
@@ -360,6 +512,19 @@ its own reference.</t>
           </front>
           <seriesInfo name="RFC" value="8610"/>
           <seriesInfo name="DOI" value="10.17487/RFC8610"/>
+        </reference>
+        <reference anchor="RFC8742">
+          <front>
+            <title>Concise Binary Object Representation (CBOR) Sequences</title>
+            <author fullname="C. Bormann" initials="C." surname="Bormann"/>
+            <date month="February" year="2020"/>
+            <abstract>
+              <t>This document describes the Concise Binary Object Representation (CBOR) Sequence format and associated media type "application/cbor-seq". A CBOR Sequence consists of any number of encoded CBOR data items, simply concatenated in sequence.</t>
+              <t>Structured syntax suffixes for media types allow other media types to build on them and make it explicit that they are built on an existing media type as their foundation. This specification defines and registers "+cbor-seq" as a structured syntax suffix for CBOR Sequences.</t>
+            </abstract>
+          </front>
+          <seriesInfo name="RFC" value="8742"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8742"/>
         </reference>
         <reference anchor="RFC8949">
           <front>
@@ -423,6 +588,21 @@ its own reference.</t>
           <seriesInfo name="RFC" value="9943"/>
           <seriesInfo name="DOI" value="10.17487/RFC9943"/>
         </reference>
+        <reference anchor="RFC9393">
+          <front>
+            <title>Concise Software Identification Tags</title>
+            <author fullname="H. Birkholz" initials="H." surname="Birkholz"/>
+            <author fullname="J. Fitzgerald-McKay" initials="J." surname="Fitzgerald-McKay"/>
+            <author fullname="C. Schmidt" initials="C." surname="Schmidt"/>
+            <author fullname="D. Waltermire" initials="D." surname="Waltermire"/>
+            <date month="June" year="2023"/>
+            <abstract>
+              <t>ISO/IEC 19770-2:2015 Software Identification (SWID) tags provide an extensible XML-based structure to identify and describe individual software components, patches, and installation bundles. SWID tag representations can be too large for devices with network and storage constraints. This document defines a concise representation of SWID tags: Concise SWID (CoSWID) tags. CoSWID supports a set of semantics and features that are similar to those for SWID tags, as well as new semantics that allow CoSWIDs to describe additional types of information, all in a more memory-efficient format.</t>
+            </abstract>
+          </front>
+          <seriesInfo name="RFC" value="9393"/>
+          <seriesInfo name="DOI" value="10.17487/RFC9393"/>
+        </reference>
         <reference anchor="I-D.ietf-cbor-cde">
           <front>
             <title>CBOR Common Deterministic Encoding (CDE)</title>
@@ -464,139 +644,171 @@ its own reference.</t>
           </front>
           <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-cde-13"/>
         </reference>
-        <reference anchor="C2PASpec" target="https://spec.c2pa.org/specifications/specifications/2.2/specs/_attachments/C2PA_Specification.pdf">
+        <reference anchor="VTOSpec" target="https://github.com/seetadev/libp2p-vto-spec/blob/3955a077edb4aa409bbe90b82a989559fcdc2511/cbor-digest-context-requirements.md">
           <front>
-            <title>Content Credentials: C2PA Technical Specification 2.2</title>
-            <author>
-              <organization>Coalition for Content Provenance and Authenticity (C2PA)</organization>
-            </author>
-            <date year="2025" month="May" day="01"/>
-          </front>
-        </reference>
-        <reference anchor="VTOSpec" target="https://github.com/seetadev/libp2p-vto-spec">
-          <front>
-            <title>libp2p Verified Telemetry Object (VTO) Specification (work in progress)</title>
+            <title>libp2p Verified Telemetry Object (VTO) Specification (work in progress): CBOR Digest Context Requirements for VTO</title>
             <author>
               <organization>libp2p / seetadev (in-progress specification)</organization>
             </author>
-            <date>n.d.</date>
+            <date year="2026" month="September" day="02"/>
           </front>
         </reference>
       </references>
     </references>
   </back>
   <!-- ##markdown-source:
-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
+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
 
 -->
 
