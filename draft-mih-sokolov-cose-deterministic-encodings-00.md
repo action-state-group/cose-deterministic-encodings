@@ -1,8 +1,8 @@
 ---
-title: "The COSE payload-preimage-encoding Header Parameter"
-abbrev: "COSE payload-preimage-encoding"
-docname: draft-mih-sokolov-cose-payload-preimage-encoding-01
-date: 2026-09-23
+title: "Deterministic Encodings for COSE"
+abbrev: "COSE Deterministic Encodings"
+docname: draft-mih-sokolov-cose-deterministic-encodings-00
+date: 2026-09-25
 category: std
 submissiontype: IETF
 ipr: trust200902
@@ -59,11 +59,11 @@ structured content is serialized into a preimage, the Hash Envelope does not
 capture the specific encoding algorithm that was used. A verifier who has
 access to the content, but not to the preimage itself, is therefore unable
 to reliably confirm that this content matches the hash. This document
-defines an extension to COSE Hash Envelope: an additional protected-header
-parameter (payload-preimage-encoding) which captures the specific encoding a
-producer applied to create the preimage, and a small IANA registry of
-encoding identifiers whose initial entry is the Core Deterministic Encoding
-Requirements of RFC 8949.
+establishes an IANA registry of deterministic encodings for structured
+content, whose initial entry is the Core Deterministic Encoding Requirements
+of RFC 8949, and defines an additional COSE Hash Envelope protected-header
+parameter (payload-preimage-encoding) that captures which registered
+encoding a producer applied to create the preimage.
 
 --- note_Note_to_Readers
 
@@ -261,15 +261,14 @@ key order, placing "a" before "b"), gives the 7-octet preimage
 ])
 ~~~
 
-## Where These Encodings Already Apply {#examples-deployed}
+## Examples from Other Formats {#examples-deployed}
 
-The entry in the registry ({{iana-encodings}}) is not hypothetical. The two
-examples below show a producer applying it in domains unrelated to the one
-that motivated this document -- one where the underlying format does not
-itself require a deterministic encoding, so the producer's choice is exactly
-what payload-preimage-encoding exists to record, and one where the underlying
-format already requires this deterministic encoding, so the parameter just
-names what the format already does.
+The two examples below come from other formats. In the first, the format
+does not require any deterministic encoding, so the producer's choice is
+exactly what payload-preimage-encoding exists to record. In the second, the
+format requires a deterministic encoding of its own that is close to, but
+not the same as, the one registered as Value 1 -- which is why the encoding
+has to be captured rather than inferred.
 
 {{RFC9393}} defines the Concise Software Identity (CoSWID) tag
 (concise-swid-tag) and registers application/swid+cbor as its CBOR media type
@@ -287,16 +286,24 @@ no basis to set payload-preimage-encoding to core-deterministic, and simply
 omits the parameter.
 
 {{VTOSpec}}, an in-progress libp2p specification for the Verified Telemetry
-Object (VTO), requires that the CBOR digest input for a VTO object be
-definite-length, use unique map keys ordered by the lexicographic byte order
-of their UTF-8 encodings, encode integers in shortest form, and encode
-floating-point fields as IEEE 754 binary64 -- together the Core Deterministic
-Encoding Requirements of {{RFC8949}} Section 4.2.1, applied before hashing. A
-producer emitting a VTO object as a Hash Envelope preimage would set
-preimage-content-type (259) to application/cbor and payload-preimage-encoding
-to core-deterministic (Value 1), because VTO already requires that
-deterministic CBOR encoding before hashing, and a verifier re-deriving the
-digest over the raw CBOR item has to know it.
+Object (VTO), defines its own deterministic CBOR digest input for a VTO
+object. It shares much with the Core Deterministic Encoding Requirements of
+{{RFC8949}} Section 4.2.1 -- definite-length items and shortest-form
+integers, for example -- but differs from them in at least one respect: VTO
+encodes every floating-point field as IEEE 754 binary64, whereas the core
+requirements encode each floating-point value in the shortest form that
+preserves it. A VTO object containing the value 1.5 therefore has one
+preimage under VTO's rules (fb 3f f8 00 00 00 00 00 00) and a different one
+under core-deterministic (f9 3e 00). Both are carried with
+preimage-content-type (259) set to application/cbor, so 259 cannot tell them
+apart. A VTO producer would therefore not set payload-preimage-encoding to
+core-deterministic (Value 1): a verifier re-creating the preimage with that
+encoding could obtain a different digest, and would then report the content
+binding as failed. The VTO encoding would need a registration of its own
+({{iana-encodings}}). Two deterministic encodings of the same data model,
+both legitimately in use and indistinguishable by content type, are what the
+registry and the rule against inferring an encoding ({{verification}}) exist
+for.
 
 # Security Considerations {#security}
 
@@ -370,11 +377,11 @@ The registry names deterministic encodings of structured content; it carries
 no Hash Envelope semantics of its own, and a value registered in it is
 meaningful only through a parameter, such as payload-preimage-encoding
 ({{header-param}}), that gives the name a role. A registry, rather than a
-fixed reference, is used because more than one deterministic encoding is
-expected to be named for Hash Envelope use over time, from more than one
-content-type family: the CBOR Common Deterministic Encoding {{I-D.ietf-cbor-cde}}, in
-progress in the CBOR Working Group and distinct from the core requirements
-RFC 8949 Section 4.2.1 defines, is an anticipated future registration.
+fixed reference, is used because more than one deterministic encoding of the
+same data model is already in use -- {{examples-deployed}} gives an example
+-- and others have been proposed, such as the CBOR Common Deterministic
+Encoding {{I-D.ietf-cbor-cde}}, which is distinct from the core requirements
+RFC 8949 Section 4.2.1 defines.
 Specification Required keeps each addition reviewed and immutable.
 Registration policy: Specification Required ({{RFC8126}} Section 4.6), with
 Designated Expert review. Registration template: Value, Name, Description,
@@ -398,3 +405,11 @@ structured content types can be added by later registrations, each citing
 its own reference.
 
 --- back
+
+# Acknowledgments
+{:numbered="false"}
+
+The authors thank Amaury Chamayou for a detailed review of an earlier
+revision, which aligned this document's terminology, CDDL, and verification
+rules with {{RFC9995}} and proposed the name core-deterministic for the
+initial registry entry.
