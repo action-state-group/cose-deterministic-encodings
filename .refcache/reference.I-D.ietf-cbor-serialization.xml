@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-08">
+   <front>
+      <title>CBOR Serialization and Determinism</title>
+      <author initials="L." surname="Lundblade" fullname="Laurence Lundblade">
+         <organization>Security Theory LLC</organization>
+      </author>
+      <date month="July" day="29" year="2026" />
+      <abstract>
+	 <t>   This document defines two CBOR serializations: &quot;preferred-plus
+   serialization&quot; and &quot;deterministic serialization.&quot;  It also introduces
+   the term &quot;general serialization&quot; to name the complete set of all
+   serializations defined in RFC 8949.  Together, these three form a set
+   of serializations that cover the majority of CBOR serialization use
+   cases.
+
+   These serializations are largely compatible with those widely
+   implemented by the CBOR community.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-08" />
+   
+</reference>
