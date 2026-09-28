@@ -2,7 +2,7 @@
 title: "Deterministic Encodings for COSE"
 abbrev: "COSE Deterministic Encodings"
 docname: draft-mih-sokolov-cose-deterministic-encodings-00
-date: 2026-09-25
+date: 2026-09-28
 category: std
 submissiontype: IETF
 ipr: trust200902
@@ -43,24 +43,32 @@ normative:
 
 informative:
   RFC9393:
-  I-D.ietf-cbor-cde:
-  VTOSpec:
-    title: "CBOR Digest Context Requirements for VTO (work in progress)"
-    target: https://github.com/seetadev/libp2p-vto-spec/blob/3955a077edb4aa409bbe90b82a989559fcdc2511/cbor-digest-context-requirements.md
-    date: 2026-09-02
+  I-D.ietf-cbor-serialization:
+  DAG-CBOR:
+    title: "Specification: DAG-CBOR"
+    target: https://ipld.io/specs/codecs/dag-cbor/spec/
+    date: 2026
     author:
-      - organization: libp2p Verified Telemetry Object (VTO) specification
+      - organization: IPLD
+  CardanoCDDL:
+    title: "Conway era ledger CDDL (script_data_hash)"
+    target: https://github.com/IntersectMBO/cardano-ledger/blob/9ef91412ee/eras/conway/impl/cddl/data/conway.cddl
+    date: 2026-07-19
+    author:
+      - organization: Intersect MBO
 
 --- abstract
 
-A COSE Hash Envelope carries the hash of a preimage held elsewhere, but not
-the deterministic encoding used to produce that preimage from structured
-content, so a verifier that holds only the decoded content cannot reliably
-recompute the hash. This document establishes an IANA registry of
-deterministic encodings, whose initial entry is the Core Deterministic
-Encoding Requirements of RFC 8949, and defines a COSE Hash Envelope
-protected-header parameter that identifies which registered encoding a
-producer applied.
+A COSE Hash Envelope signs the digest of a preimage that is conveyed
+separately. When the preimage is an encoded structured value and a verifier
+holds that value only in decoded form, the verifier has to encode it again,
+and the digest matches only if it applies the same deterministic encoding as
+the producer. RFC 8949 describes more than one such encoding for the same
+content type, and the preimage content type does not say which one was
+applied. This document defines a COSE Hash Envelope protected-header
+parameter that identifies the encoding, and an IANA registry of deterministic
+encodings whose initial entry is the Core Deterministic Encoding Requirements
+of RFC 8949.
 
 --- note_Note_to_Readers
 
@@ -71,26 +79,47 @@ Individual submission, intended for the COSE Working Group (cose@ietf.org).
 
 # Introduction {#intro}
 
-Structured content formats often do not mandate a single deterministic
-encoding, so the same value can be serialized as more than one byte sequence.
-The COSE Hash Envelope {{RFC9995}} identifies the hash function (258) and the
-content type of the preimage (259), but not which encoding produced it. A
-verifier that holds the preimage bytes can hash them and compare the result
-to the payload ({{RFC9995}} Section 5.3). A verifier that holds the content
-only in decoded form -- for example, a record stored or forwarded as decoded
-data, or re-serialized by an intermediary, so that the original bytes were
-not retained -- has to re-encode it first, and needs to know which encoding
-to use.
+The COSE Hash Envelope {{RFC9995}} signs the digest of a preimage and
+identifies the hash function (258), the content type of the preimage (259),
+and optionally where the preimage can be found (260). A verifier that holds
+the preimage bytes hashes them and compares the result to the payload, as
+{{RFC9995}} Section 5.3 describes, and needs nothing more.
+
+The preimage is conveyed separately, and payload-location is optional, so a
+verifier can hold the content without the bytes that were hashed: when the
+content arrives as a data item inside a larger CBOR message, whose decoder
+usually cannot return that item's encoded bytes
+({{I-D.ietf-cbor-serialization}} Appendix K.1), or when a store keeps it as
+decoded data next to its digest. Such a verifier has to encode the value
+again, the case in which {{I-D.ietf-cbor-serialization}} Section 5.3.1 says
+deterministic encoding becomes necessary.
+
+Re-encoding reproduces the preimage only if the verifier applies the
+encoding the producer applied, and more than one is in use. {{RFC8949}}
+Section 4.2.1 sorts map keys bytewise, while Section 4.2.3 keeps the
+length-first order of the earlier CBOR specification: `{1000: 1, "a": 2}` is
+`a2 19 03 e8 01 61 61 02` under the former and `a2 61 61 02 19 03 e8 01`
+under the latter. The Cardano ledger still requires the earlier order for
+hashed data that "needs to be independently constructed by each recipient"
+{{CardanoCDDL}}. Float width is not visible in the data model ({{RFC8949}}
+Section 2), and {{DAG-CBOR}} encodes every floating-point value as binary64:
+1.5 is `fb 3f f8 00 00 00 00 00 00` there and `f9 3e 00` under Section 4.2.1.
+The preimage-content-type (259) names the type of the content, such as
+application/swid+cbor, not the encoding applied to it, so a verifier that
+guesses the encoding cannot tell a modified value from one encoded under a
+different rule.
 
 This document defines one protected-header parameter,
 payload-preimage-encoding, which identifies that encoding, and a small IANA
 registry of encoding identifiers. It uses the extension point the Hash
 Envelope protected header already provides ({{Section 4 of RFC9995}}:
 `* (int / tstr) => any`). The encoding is not carried as a media-type
-parameter of preimage-content-type (259), because 259 may be a CoAP
-Content-Format number, which cannot carry parameters, and because such a
-parameter would have to be defined for every media type the encoding applies
-to.
+parameter of preimage-content-type (259). The application/cbor media type defines no
+parameters ({{RFC8949}} Section 9.3), so such a parameter would have to be
+registered for every media type the encoding applies to, and a CoAP
+Content-Format number carries only the parameters fixed in its registry
+entry ({{RFC7252}} Section 12.3), so each pairing of media type and encoding
+would also need its own number.
 
 # Terminology {#terminology}
 
@@ -166,7 +195,10 @@ Hash_Envelope_Protected_Header_With_Encoding = {
 Label TBD\_1 MAY be present in the protected header and MUST NOT be present
 in the unprotected header, following the placement rule {{RFC9995}} states
 for labels 258 through 260. When label TBD\_1 is present,
-preimage-content-type (259) MUST also be present ({{consistency}}).
+preimage-content-type (259) MUST also be present ({{consistency}}). A
+producer MUST NOT list label TBD\_1 in the crit header parameter
+({{RFC9052}} Section 3.1), so that a verifier that implements only
+{{RFC9995}} can ignore it.
 
 # Producer and Verifier Behavior {#behavior}
 
@@ -279,11 +311,12 @@ decoding a preimage and encoding the result again reproduces the preimage
 only if decoding preserved that value exactly. Decoding into a programming
 language's native types can lose distinctions the encoding depends on -- for
 example, between integer and floating-point numbers, or the presence of a
-tag. The core deterministic encoding requirements of {{RFC8949}} Section
-4.2.1 also leave some choices to each application, such as those {{RFC8949}}
-Section 4.2.2 describes for tags, large integers, and floating-point values;
-those choices belong to the structured value, not to the encoding this
-parameter captures. A producer that re-reads stored content before hashing
+tag. Choices that decide which data item represents a value, such as those
+{{RFC8949}} Section 4.2.2 leaves to each protocol for tags, big numbers, and
+integer versus floating-point values, belong to the structured value, not to
+the encoding this parameter captures. A choice that changes only how the same
+data item is serialized, such as binary64-only floats, is a different
+encoding and needs its own value. A producer that re-reads stored content before hashing
 MUST ensure the preimage it hashes is byte-identical to the encoding's own
 output. A verifier that re-creates a preimage from a structured value
 ({{verification}}) needs that value exactly as the producer encoded it;
@@ -321,24 +354,27 @@ IANA is requested to create a new registry, "COSE Deterministic Encodings".
 The registry identifies deterministic encodings of structured content; it
 carries no Hash Envelope semantics of its own, and a value is meaningful only
 through a parameter, such as payload-preimage-encoding ({{header-param}}),
-that gives it a role.
+that gives it a role. The registry is not specific to one data model or
+content type: an entry applies wherever preimage-content-type (259) matches
+its Applicable Content Types ({{consistency}}), and encodings for other
+structured content types can be registered under the policy below.
 
-A registry is used, rather than a fixed reference, because more than one
-deterministic encoding of the same data model is in use. For example,
-{{VTOSpec}} encodes every floating-point field as IEEE 754 binary64, while
-the core requirements of {{RFC8949}} Section 4.2.1 use the shortest form that
-preserves the value: 1.5 is fb 3f f8 00 00 00 00 00 00 under the former and
-f9 3e 00 under the latter. Both are carried as application/cbor, so
-preimage-content-type (259) cannot distinguish them. Others have been
-proposed, such as the CBOR Common Deterministic Encoding
-{{I-D.ietf-cbor-cde}}.
+A registry is used, rather than a fixed reference, for the reasons in
+{{intro}}. A profile that has its own media type, such as
+application/vnd.ipld.dag-cbor, is already identified by 259; content labelled
+application/cbor, or with an application's own type such as
+application/swid+cbor, is not. Rules that only restrict which data items may
+occur produce Section 4.2.1 output and use value 1; this includes the
+deterministic serialization of {{I-D.ietf-cbor-serialization}}, which only
+excludes non-trivial NaNs (Section C.5 of that document).
 
 Registration policy: Specification Required ({{RFC8126}} Section 4.6). The
 registration template is: Value (an unsigned integer), Name, Description,
 Applicable Content Types (media types and structured syntax suffixes, matched
 against 259 as {{consistency}} specifies), Reference, and Change Controller.
 The designated expert checks that the referenced specification defines
-exactly one deterministic encoding for the value, and that its Applicable
+exactly one deterministic encoding for the value, together with any
+constraints on the structured values it accepts, and that its Applicable
 Content Types are correct and can be matched as {{consistency}} specifies.
 Entries are immutable: the registry grows by adding values, never by
 reinterpreting an existing one. An entry MAY be withdrawn through the same
@@ -355,8 +391,9 @@ application/cbor-seq, application/cose, application/cose-key,
 application/cose-key-set, application/cose-x509, and application/cwt, and
 media types with the +cbor, +cbor-seq, +cose, or +cwt structured syntax
 suffix. For a CBOR sequence {{RFC8742}}, each data item is encoded according
-to these requirements. The application-level choices that {{RFC8949}}
-Section 4.2.2 leaves open are not part of value 1 ({{security}}).
+to these requirements. Value 1 is exactly {{RFC8949}} Section 4.2.1; the
+choices that Section 4.2.2 leaves to a protocol are not part of it
+({{security}}).
 
 --- back
 
