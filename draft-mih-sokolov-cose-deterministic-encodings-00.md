@@ -2,7 +2,7 @@
 title: "Deterministic Encodings for COSE"
 abbrev: "COSE Deterministic Encodings"
 docname: draft-mih-sokolov-cose-deterministic-encodings-00
-date: 2026-09-28
+date: 2026-09-30
 category: std
 submissiontype: IETF
 ipr: trust200902
@@ -73,7 +73,6 @@ of RFC 8949.
 --- note_Note_to_Readers
 
 Individual submission, intended for the COSE Working Group (cose@ietf.org).
-**Draft for co-author and working-group review; not yet submitted.**
 
 --- middle
 
@@ -89,7 +88,7 @@ The preimage is conveyed separately, and payload-location is optional, so a
 verifier can hold the content without the bytes that were hashed: when the
 content arrives as a data item inside a larger CBOR message, whose decoder
 usually cannot return that item's encoded bytes
-({{I-D.ietf-cbor-serialization}} Appendix K.1), or when a store keeps it as
+({{I-D.ietf-cbor-serialization}} Appendix J.1), or when a store keeps it as
 decoded data next to its digest. Such a verifier has to encode the value
 again, the case in which {{I-D.ietf-cbor-serialization}} Section 5.3.1 says
 deterministic encoding becomes necessary.
@@ -101,7 +100,10 @@ length-first order of the earlier CBOR specification: `{1000: 1, "a": 2}` is
 `a2 19 03 e8 01 61 61 02` under the former and `a2 61 61 02 19 03 e8 01`
 under the latter. The Cardano ledger still requires the earlier order for
 hashed data that "needs to be independently constructed by each recipient"
-{{CardanoCDDL}}. Float width is not visible in the data model ({{RFC8949}}
+{{CardanoCDDL}}. For PlutusV1 it also encodes the cost model as an
+indefinite-length array, which Section 4.2.1 does not allow, and wraps the
+result in a byte string.
+Float width is not visible in the data model ({{RFC8949}}
 Section 2), and {{DAG-CBOR}} encodes every floating-point value as binary64:
 1.5 is `fb 3f f8 00 00 00 00 00 00` there and `f9 3e 00` under Section 4.2.1.
 The preimage-content-type (259) names the type of the content, such as
@@ -312,8 +314,8 @@ only if decoding preserved that value exactly. Decoding into a programming
 language's native types can lose distinctions the encoding depends on -- for
 example, between integer and floating-point numbers, or the presence of a
 tag. Choices that decide which data item represents a value, such as those
-{{RFC8949}} Section 4.2.2 leaves to each protocol for tags, big numbers, and
-integer versus floating-point values, belong to the structured value, not to
+{{RFC8949}} Section 4.2.2 leaves to each protocol for tags and for integer
+versus floating-point values, belong to the structured value, not to
 the encoding this parameter captures. A choice that changes only how the same
 data item is serialized, such as binary64-only floats, is a different
 encoding and needs its own value. A producer that re-reads stored content before hashing
@@ -366,7 +368,7 @@ application/cbor, or with an application's own type such as
 application/swid+cbor, is not. Rules that only restrict which data items may
 occur produce Section 4.2.1 output and use value 1; this includes the
 deterministic serialization of {{I-D.ietf-cbor-serialization}}, which only
-excludes non-trivial NaNs (Section C.5 of that document).
+excludes non-trivial NaNs (Appendix B.5 of that document).
 
 Registration policy: Specification Required ({{RFC8126}} Section 4.6). The
 registration template is: Value (an unsigned integer), Name, Description,
@@ -388,9 +390,10 @@ Initial contents:
 
 The Applicable Content Types of value 1 are application/cbor,
 application/cbor-seq, application/cose, application/cose-key,
-application/cose-key-set, application/cose-x509, and application/cwt, and
-media types with the +cbor, +cbor-seq, +cose, or +cwt structured syntax
-suffix. For a CBOR sequence {{RFC8742}}, each data item is encoded according
+application/cose-key-set, application/cose-x509, application/cwt, and
+application/multipart-core, and media types with
+the +cbor, +cbor-seq, +cose, +cwt, or +sd-cwt structured syntax suffix.
+For a CBOR sequence {{RFC8742}}, each data item is encoded according
 to these requirements. Value 1 is exactly {{RFC8949}} Section 4.2.1; the
 choices that Section 4.2.2 leaves to a protocol are not part of it
 ({{security}}).
