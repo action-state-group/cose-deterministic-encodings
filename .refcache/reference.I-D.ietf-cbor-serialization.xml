@@ -1,25 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-08">
+<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-09">
    <front>
       <title>CBOR Serialization and Determinism</title>
       <author initials="L." surname="Lundblade" fullname="Laurence Lundblade">
          <organization>Security Theory LLC</organization>
       </author>
-      <date month="July" day="29" year="2026" />
+      <date month="September" day="28" year="2026" />
       <abstract>
-	 <t>   This document defines two CBOR serializations: &quot;preferred-plus
-   serialization&quot; and &quot;deterministic serialization.&quot;  It also introduces
-   the term &quot;general serialization&quot; to name the complete set of all
-   serializations defined in RFC 8949.  Together, these three form a set
-   of serializations that cover the majority of CBOR serialization use
-   cases.
-
+	 <t>   RFC 8949 defines CBOR, a standard for serializing data types such as
+   integers, strings, and arrays into encoded bytes.  CBOR serialization
+   is flexible, allowing data types to be encoded in multiple ways to
+   accommodate deployment in constrained environments.  This document
+   normatively defines one particular serialization, called &quot;preferred-
+   plus serialization,&quot; that is suitable for the majority of CBOR-based
+   protocols.  Protocol designers and implementers who choose it need
+   not understand or specify serialization details themselves.  This
+   document also normatively defines a deterministic serialization.
    These serializations are largely compatible with those widely
    implemented by the CBOR community.
+
+   This document updates RFC 8949 with a new rule that limits how new
+   tag definitions can affect the CBOR data model.
+
+   This document provides clarifications to RFC 8949 regarding bignums
+   and floating-point NaN handling, along with general background
+   information on serialization, determinism, and CBOR byte-string
+   wrapping.
 
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-08" />
+   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-09" />
    
 </reference>
