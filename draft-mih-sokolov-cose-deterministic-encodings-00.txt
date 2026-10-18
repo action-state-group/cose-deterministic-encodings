@@ -5,8 +5,8 @@
 COSE                                                              S. Mih
 Internet-Draft                                  Action State Group, Inc.
 Intended status: Standards Track                              A. Sokolov
-Expires: 3 April 2027                                    Tyche Institute
-                                                       30 September 2026
+Expires: 21 April 2027                                   Tyche Institute
+                                                         18 October 2026
 
 
                     Deterministic Encodings for COSE
@@ -46,16 +46,16 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 3 April 2027.
+   This Internet-Draft will expire on 21 April 2027.
 
 
 
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 1]
+Mih & Sokolov             Expires 21 April 2027                 [Page 1]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 Copyright Notice
@@ -109,9 +109,9 @@ Copyright Notice
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 2]
+Mih & Sokolov             Expires 21 April 2027                 [Page 2]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    content, such as application/swid+cbor, not the encoding applied to
@@ -165,9 +165,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 3]
+Mih & Sokolov             Expires 21 April 2027                 [Page 3]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    Failed:  The verifier found the protected header inconsistent
@@ -221,9 +221,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 4]
+Mih & Sokolov             Expires 21 April 2027                 [Page 4]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 4.1.  Producers
@@ -277,9 +277,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 5]
+Mih & Sokolov             Expires 21 April 2027                 [Page 5]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    A verifier that holds only a structured value -- for example, content
@@ -333,9 +333,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 6]
+Mih & Sokolov             Expires 21 April 2027                 [Page 6]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    preimage-content-type (259) to application/swid+cbor and
@@ -389,9 +389,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 7]
+Mih & Sokolov             Expires 21 April 2027                 [Page 7]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
       review and interoperability testing; not intended for production
@@ -445,9 +445,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 8]
+Mih & Sokolov             Expires 21 April 2027                 [Page 8]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 8.  Privacy Considerations
@@ -501,9 +501,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                  [Page 9]
+Mih & Sokolov             Expires 21 April 2027                 [Page 9]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    A registry is used, rather than a fixed reference, for the reasons in
@@ -557,9 +557,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                 [Page 10]
+Mih & Sokolov             Expires 21 April 2027                [Page 10]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 10.  References
@@ -613,9 +613,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                 [Page 11]
+Mih & Sokolov             Expires 21 April 2027                [Page 11]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    [RFC9995]  Steele, O., Lasker, S., and H. Birkholz, "CBOR Object
@@ -669,9 +669,9 @@ Authors' Addresses
 
 
 
-Mih & Sokolov             Expires 3 April 2027                 [Page 12]
+Mih & Sokolov             Expires 21 April 2027                [Page 12]
 
-Internet-Draft        COSE Deterministic Encodings        September 2026
+Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
    Anton Sokolov
@@ -725,4 +725,4 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
 
-Mih & Sokolov             Expires 3 April 2027                 [Page 13]
+Mih & Sokolov             Expires 21 April 2027                [Page 13]
