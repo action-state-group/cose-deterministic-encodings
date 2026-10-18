@@ -75,6 +75,10 @@ of RFC 8949.
 
 Individual submission, intended for the COSE Working Group (cose@ietf.org).
 
+Source for this document, with a reference emitter and verifier and test
+vectors, is at
+[](https://github.com/action-state-group/cose-deterministic-encodings).
+
 --- middle
 
 # Introduction {#intro}

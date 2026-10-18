@@ -31,6 +31,10 @@ Note to Readers
    Individual submission, intended for the COSE Working Group
    (cose@ietf.org).
 
+   Source for this document, with a reference emitter and verifier and
+   test vectors, is at https://github.com/action-state-group/cose-
+   deterministic-encodings.
+
 Status of This Memo
 
    This Internet-Draft is submitted in full conformance with the
@@ -46,10 +50,6 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 21 April 2027.
-
-
-
 
 
 
@@ -57,6 +57,8 @@ Mih & Sokolov             Expires 21 April 2027                 [Page 1]
 
 Internet-Draft        COSE Deterministic Encodings          October 2026
 
+
+   This Internet-Draft will expire on 21 April 2027.
 
 Copyright Notice
 
@@ -104,8 +106,6 @@ Copyright Notice
    array, which Section 4.2.1 does not allow, and wraps the result in a
    byte string.  Float width is not visible in the data model ([RFC8949]
    Section 2), and [DAG-CBOR] encodes every floating-point value as
-   binary64: 1.5 is fb 3f f8 00 00 00 00 00 00 there and f9 3e 00 under
-   Section 4.2.1.  The preimage-content-type (259) names the type of the
 
 
 
@@ -114,6 +114,8 @@ Mih & Sokolov             Expires 21 April 2027                 [Page 2]
 Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
+   binary64: 1.5 is fb 3f f8 00 00 00 00 00 00 there and f9 3e 00 under
+   Section 4.2.1.  The preimage-content-type (259) names the type of the
    content, such as application/swid+cbor, not the encoding applied to
    it, so a verifier that guesses the encoding cannot tell a modified
    value from one encoded under a different rule.
@@ -159,9 +161,7 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
       three outcomes: verified, failed, or unverified.
 
    Verified:  The verifier hashed the preimage, as held or as re-created
-      from a structured value, with the payload-hash-alg (258)
-      algorithm, obtained the payload, and did not find the protected
-      header inconsistent (Section 4.2).
+
 
 
 
@@ -169,6 +169,10 @@ Mih & Sokolov             Expires 21 April 2027                 [Page 3]
 
 Internet-Draft        COSE Deterministic Encodings          October 2026
 
+
+      from a structured value, with the payload-hash-alg (258)
+      algorithm, obtained the payload, and did not find the protected
+      header inconsistent (Section 4.2).
 
    Failed:  The verifier found the protected header inconsistent
       (Section 4.2), or hashed the preimage, as held or as re-created,
@@ -213,10 +217,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    header parameter ([RFC9052] Section 3.1), so that a verifier that
    implements only [RFC9995] can ignore it.
 
-4.  Producer and Verifier Behavior
-
-
-
 
 
 
@@ -225,6 +225,8 @@ Mih & Sokolov             Expires 21 April 2027                 [Page 4]
 
 Internet-Draft        COSE Deterministic Encodings          October 2026
 
+
+4.  Producer and Verifier Behavior
 
 4.1.  Producers
 
@@ -265,6 +267,21 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    deterministic-encodings; a verifier that implements only [RFC9995]
    ignores the parameter, and its results are unchanged.
 
+
+
+
+
+
+
+
+
+
+
+Mih & Sokolov             Expires 21 April 2027                 [Page 5]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
 4.3.  Verifying the Content Binding
 
    A verifier that holds the preimage itself -- for example, as
@@ -274,13 +291,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    payload.  That check needs no encoding information, and applies
    whether or not deterministic-encodings is present, subject to
    Section 4.2.
-
-
-
-Mih & Sokolov             Expires 21 April 2027                 [Page 5]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
    A verifier that holds only a structured value -- for example, content
    it received, stored, or decoded in a form other than the preimage
@@ -313,6 +323,21 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    preimage a2616101616202, whose SHA-256 digest is
    a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3:
 
+
+
+
+
+
+
+
+
+
+
+Mih & Sokolov             Expires 21 April 2027                 [Page 6]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
    18([ # COSE_Sign1
      <<{
        / alg                     / 1: -7, # ES256
@@ -330,14 +355,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    encoding of them, so two producers may serialize the same tag as
    different byte sequences.  A producer that applies the Core
    Deterministic Encoding Requirements before hashing a CoSWID tag sets
-
-
-
-Mih & Sokolov             Expires 21 April 2027                 [Page 6]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
    preimage-content-type (259) to application/swid+cbor and
    deterministic-encodings to core-deterministic (Value 1) -- recording
    its own choice, not a CoSWID requirement -- so that a verifier
@@ -368,6 +385,15 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    It is up to the individual working groups to use this information as
    they see fit".
 
+
+
+
+
+Mih & Sokolov             Expires 21 April 2027                 [Page 7]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
 6.1.  Reference Emitter and Verifier
 
    Organization:  The authors of this document.
@@ -386,14 +412,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
       vectors).
 
    Level of maturity:  A reference written alongside this document, for
-
-
-
-Mih & Sokolov             Expires 21 April 2027                 [Page 7]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
       review and interoperability testing; not intended for production
       use.
 
@@ -424,6 +442,14 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    lose distinctions the encoding depends on -- for example, between
    integer and floating-point numbers, or the presence of a tag.
    Choices that decide which data item represents a value, such as those
+
+
+
+Mih & Sokolov             Expires 21 April 2027                 [Page 8]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
    [RFC8949] Section 4.2.2 leaves to each protocol for tags and for
    integer versus floating-point values, belong to the structured value,
    not to the encoding this parameter captures.  A choice that changes
@@ -435,20 +461,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    needs that value exactly as the producer encoded it; otherwise its
    recomputed digest can differ from the payload, and the content
    binding is then reported as failed.
-
-
-
-
-
-
-
-
-
-
-Mih & Sokolov             Expires 21 April 2027                 [Page 8]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
 8.  Privacy Considerations
 
@@ -487,6 +499,13 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    the "Integer values from 256 to 65535" range of the COSE Header
    Parameters registry as of 2026-10-18.
 
+
+
+Mih & Sokolov             Expires 21 April 2027                 [Page 9]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
 9.2.  COSE Deterministic Encodings Registry
 
    IANA is requested to create a new registry, "COSE Deterministic
@@ -498,13 +517,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    applies wherever preimage-content-type (259) matches its Applicable
    Content Types (Section 4.2), and encodings for other structured
    content types can be registered under the policy below.
-
-
-
-Mih & Sokolov             Expires 21 April 2027                 [Page 9]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
    A registry is used, rather than a fixed reference, for the reasons in
    Section 1.  A profile that has its own media type, such as
@@ -532,6 +544,24 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
    Initial contents:
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+Mih & Sokolov             Expires 21 April 2027                [Page 10]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
     +=====+====================+===============+=========+============+
     |Value| Name               | Description   |Reference| Change     |
     |     |                    |               |         | Controller |
@@ -553,14 +583,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    requirements.  Value 1 is exactly [RFC8949] Section 4.2.1; the
    choices that Section 4.2.2 leaves to a protocol are not part of it
    (Section 7).
-
-
-
-
-Mih & Sokolov             Expires 21 April 2027                [Page 10]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
 10.  References
 
@@ -586,6 +608,16 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
               RFC 8126, DOI 10.17487/RFC8126, June 2017,
               <https://www.rfc-editor.org/rfc/rfc8126>.
 
+
+
+
+
+
+Mih & Sokolov             Expires 21 April 2027                [Page 11]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
@@ -609,14 +641,6 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
               Structures and Process", STD 96, RFC 9052,
               DOI 10.17487/RFC9052, August 2022,
               <https://www.rfc-editor.org/rfc/rfc9052>.
-
-
-
-
-Mih & Sokolov             Expires 21 April 2027                [Page 11]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
    [RFC9995]  Steele, O., Lasker, S., and H. Birkholz, "CBOR Object
               Signing and Encryption (COSE) Hash Envelope", RFC 9995,
@@ -642,6 +666,14 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
               <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
               serialization-09>.
 
+
+
+
+Mih & Sokolov             Expires 21 April 2027                [Page 12]
+
+Internet-Draft        COSE Deterministic Encodings          October 2026
+
+
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
@@ -665,43 +697,11 @@ Authors' Addresses
    Email: spec@actionstate.ai
 
 
-
-
-
-
-Mih & Sokolov             Expires 21 April 2027                [Page 12]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
    Anton Sokolov
    Tyche Institute
    Tallinn
    Estonia
    Email: anton.sokolov@tyche.institute
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
