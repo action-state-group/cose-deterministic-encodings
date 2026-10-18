@@ -345,10 +345,11 @@ governs that range:
 
 | Name | Label | Value Type | Value Registry | Description | Reference |
 | --- | --- | --- | --- | --- | --- |
-| deterministic-encodings | TBD\_1 (requested) | int | COSE Deterministic Encodings ({{iana-encodings}}) | Deterministic encoding applied to create the preimage of a Hash Envelope payload | This document |
+| deterministic-encodings | TBD\_1 | int | COSE Deterministic Encodings ({{iana-encodings}}) | Deterministic encoding applied to create the preimage of a Hash Envelope payload | This document |
 
-The suggested value is 271, the lowest unassigned integer in the COSE
-Header Parameters registry as of 2026-09-22.
+The suggested value for TBD\_1 is 271, the lowest unassigned value in the
+"Integer values from 256 to 65535" range of the COSE Header Parameters
+registry as of 2026-10-18.
 
 ## COSE Deterministic Encodings Registry {#iana-encodings}
 

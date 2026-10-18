@@ -394,23 +394,24 @@ Mih & Sokolov             Expires 3 April 2027                  [Page 7]
 Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
-   +==============+===========+=====+=============+=============+=========+
-   |Name          |Label      |Value|Value        |Description  |Reference|
-   |              |           |Type |Registry     |             |         |
-   +==============+===========+=====+=============+=============+=========+
-   |deterministic-|TBD_1      |int  |COSE         |Deterministic|This     |
-   |encodings     |(requested)|     |Deterministic|encoding     |document |
-   |              |           |     |Encodings    |applied to   |         |
-   |              |           |     |(Section 8.2)|create the   |         |
-   |              |           |     |             |preimage of a|         |
-   |              |           |     |             |Hash Envelope|         |
-   |              |           |     |             |payload      |         |
-   +--------------+-----------+-----+-------------+-------------+---------+
+   +================+=====+=====+=============+=============+=========+
+   | Name           |Label|Value|Value        |Description  |Reference|
+   |                |     |Type |Registry     |             |         |
+   +================+=====+=====+=============+=============+=========+
+   | deterministic- |TBD_1|int  |COSE         |Deterministic|This     |
+   | encodings      |     |     |Deterministic|encoding     |document |
+   |                |     |     |Encodings    |applied to   |         |
+   |                |     |     |(Section 8.2)|create the   |         |
+   |                |     |     |             |preimage of a|         |
+   |                |     |     |             |Hash Envelope|         |
+   |                |     |     |             |payload      |         |
+   +----------------+-----+-----+-------------+-------------+---------+
 
-                                  Table 1
+                                 Table 1
 
-   The suggested value is 271, the lowest unassigned integer in the COSE
-   Header Parameters registry as of 2026-09-22.
+   The suggested value for TBD_1 is 271, the lowest unassigned value in
+   the "Integer values from 256 to 65535" range of the COSE Header
+   Parameters registry as of 2026-10-18.
 
 8.2.  COSE Deterministic Encodings Registry
 
@@ -441,7 +442,6 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    Reference, and Change Controller.  The designated expert checks that
    the referenced specification defines exactly one deterministic
    encoding for the value, together with any constraints on the
-   structured values it accepts, and that its Applicable Content Types
 
 
 
@@ -450,6 +450,7 @@ Mih & Sokolov             Expires 3 April 2027                  [Page 8]
 Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
+   structured values it accepts, and that its Applicable Content Types
    are correct and can be matched as Section 4.2 specifies.  Entries are
    immutable: the registry grows by adding values, never by
    reinterpreting an existing one.  An entry MAY be withdrawn through
@@ -494,10 +495,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
               <https://www.rfc-editor.org/rfc/rfc6838>.
 
-   [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
-              Application Protocol (CoAP)", RFC 7252,
-              DOI 10.17487/RFC7252, June 2014,
-              <https://www.rfc-editor.org/rfc/rfc7252>.
+
+
+
 
 
 
@@ -505,6 +505,11 @@ Mih & Sokolov             Expires 3 April 2027                  [Page 9]
 
 Internet-Draft        COSE Deterministic Encodings        September 2026
 
+
+   [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
+              Application Protocol (CoAP)", RFC 7252,
+              DOI 10.17487/RFC7252, June 2014,
+              <https://www.rfc-editor.org/rfc/rfc7252>.
 
    [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
               Writing an IANA Considerations Section in RFCs", BCP 26,
@@ -549,11 +554,6 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
               ledger/blob/9ef91412ee/eras/conway/impl/cddl/data/
               conway.cddl>.
 
-   [DAG-CBOR] IPLD, "Specification: DAG-CBOR", 2026,
-              <https://ipld.io/specs/codecs/dag-cbor/spec/>.
-
-
-
 
 
 
@@ -561,6 +561,9 @@ Mih & Sokolov             Expires 3 April 2027                 [Page 10]
 
 Internet-Draft        COSE Deterministic Encodings        September 2026
 
+
+   [DAG-CBOR] IPLD, "Specification: DAG-CBOR", 2026,
+              <https://ipld.io/specs/codecs/dag-cbor/spec/>.
 
    [I-D.ietf-cbor-serialization]
               Lundblade, L., "CBOR Serialization and Determinism", Work
@@ -592,9 +595,6 @@ Authors' Addresses
    Tallinn
    Estonia
    Email: anton.sokolov@tyche.institute
-
-
-
 
 
 
