@@ -118,18 +118,18 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    it, so a verifier that guesses the encoding cannot tell a modified
    value from one encoded under a different rule.
 
-   This document defines one protected-header parameter, payload-
-   preimage-encoding, which identifies that encoding, and a small IANA
-   registry of encoding identifiers.  It uses the extension point the
-   Hash Envelope protected header already provides (Section 4 of
-   [RFC9995]: * (int / tstr) => any).  The encoding is not carried as a
-   media-type parameter of preimage-content-type (259).  The
-   application/cbor media type defines no parameters ([RFC8949]
-   Section 9.3), so such a parameter would have to be registered for
-   every media type the encoding applies to, and a CoAP Content-Format
-   number carries only the parameters fixed in its registry entry
-   ([RFC7252] Section 12.3), so each pairing of media type and encoding
-   would also need its own number.
+   This document defines one protected-header parameter, deterministic-
+   encodings, which identifies that encoding, and a small IANA registry
+   of encoding identifiers.  It uses the extension point the Hash
+   Envelope protected header already provides (Section 4 of [RFC9995]: *
+   (int / tstr) => any).  The encoding is not carried as a media-type
+   parameter of preimage-content-type (259).  The application/cbor media
+   type defines no parameters ([RFC8949] Section 9.3), so such a
+   parameter would have to be registered for every media type the
+   encoding applies to, and a CoAP Content-Format number carries only
+   the parameters fixed in its registry entry ([RFC7252] Section 12.3),
+   so each pairing of media type and encoding would also need its own
+   number.
 
 2.  Terminology
 
@@ -181,14 +181,14 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    These outcomes concern the content binding only; signature validity
    is determined independently of them (Section 4.3).
 
-3.  The payload-preimage-encoding Header Parameter
+3.  The deterministic-encodings Header Parameter
 
-   TBD_1:  payload-preimage-encoding.  The deterministic encoding
-      applied to a structured value to create the preimage, which has
-      the content type given by preimage-content-type (259) and was
-      hashed with the payload-hash-alg (258) algorithm to produce the
-      payload.  The value is the integer Value (not the Name) assigned
-      to an encoding in the COSE Deterministic Encodings registry
+   TBD_1:  deterministic-encodings.  The deterministic encoding applied
+      to a structured value to create the preimage, which has the
+      content type given by preimage-content-type (259) and was hashed
+      with the payload-hash-alg (258) algorithm to produce the payload.
+      The value is the integer Value (not the Name) assigned to an
+      encoding in the COSE Deterministic Encodings registry
       (Section 8.2).
 
    It extends [RFC9995] by adding one optional member to the
@@ -201,7 +201,7 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
        &(payload_hash_alg: 258) => int,
        ? &(payload_preimage_content_type: 259) => uint / tstr,
        ? &(payload_location: 260) => tstr,
-       ? &(payload_preimage_encoding: TBD_1) => int,
+       ? &(deterministic_encodings: TBD_1) => int,
        * (int / tstr) => any
    }
 
@@ -229,8 +229,8 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 4.1.  Producers
 
    When a producer creates the preimage by applying a deterministic
-   encoding to a structured value, it SHOULD include payload-preimage-
-   encoding, so that a verifier holding only the structured value can
+   encoding to a structured value, it SHOULD include deterministic-
+   encodings, so that a verifier holding only the structured value can
    re-create the preimage.  When present, the value MUST identify the
    encoding actually applied.  An unstructured preimage -- for example
    application/octet-stream, an image, or an archive -- has no
@@ -240,9 +240,9 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
    Each registered encoding lists the content types it applies to, as
    the Applicable Content Types of its registry entry (Section 8.2).
-   When payload-preimage-encoding is present, preimage-content-type
-   (259) MUST also be present, and its value MUST match one of the
-   Applicable Content Types of the captured encoding:
+   When deterministic-encodings is present, preimage-content-type (259)
+   MUST also be present, and its value MUST match one of the Applicable
+   Content Types of the captured encoding:
 
    *  A 259 value that is a media-type name matches when its type and
       subtype -- with any parameters removed, and compared case-
@@ -256,13 +256,13 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
    A producer MUST NOT emit a Hash Envelope that violates these rules --
    for example, one pairing core-deterministic with application/json.  A
-   verifier that finds payload-preimage-encoding present with preimage-
+   verifier that finds deterministic-encodings present with preimage-
    content-type (259) absent, or with a 259 value that does not match
    the Applicable Content Types of an encoding the verifier recognizes,
    MUST report the content binding as failed, without attempting
    recomputation.  This check comes first, and takes precedence over
    Section 4.3.  This outcome applies only to Hash Envelopes that carry
-   payload-preimage-encoding; a verifier that implements only [RFC9995]
+   deterministic-encodings; a verifier that implements only [RFC9995]
    ignores the parameter, and its results are unchanged.
 
 4.3.  Verifying the Content Binding
@@ -272,7 +272,7 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    as [RFC9995] Section 5.3 describes: it hashes the preimage with the
    payload-hash-alg (258) algorithm and compares the result to the
    payload.  That check needs no encoding information, and applies
-   whether or not payload-preimage-encoding is present, subject to
+   whether or not deterministic-encodings is present, subject to
    Section 4.2.
 
 
@@ -285,10 +285,10 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    A verifier that holds only a structured value -- for example, content
    it received, stored, or decoded in a form other than the preimage
    itself -- has to re-create the preimage by encoding that value, and
-   needs payload-preimage-encoding to do so.  Such a verifier MUST
-   encode the value with the encoding the parameter captures, and MUST
-   NOT infer the encoding from preimage-content-type (259) or from the
-   structure of the value.  If payload-preimage-encoding is absent, or
+   needs deterministic-encodings to do so.  Such a verifier MUST encode
+   the value with the encoding the parameter captures, and MUST NOT
+   infer the encoding from preimage-content-type (259) or from the
+   structure of the value.  If deterministic-encodings is absent, or
    carries a value the verifier does not recognize or implement, the
    verifier cannot re-create the preimage: it MUST NOT report the
    content binding as verified, and MUST report it as unverified rather
@@ -315,10 +315,10 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 
    18([ # COSE_Sign1
      <<{
-       / alg               / 1: -7, # ES256
-       / hash algorithm    / 258: -16, # sha-256
-       / preimage type     / 259: "application/cbor",
-       / preimage encoding / TBD_1: 1, # core-deterministic
+       / alg                     / 1: -7, # ES256
+       / hash algorithm          / 258: -16, # sha-256
+       / preimage type           / 259: "application/cbor",
+       / deterministic encodings / TBD_1: 1, # core-deterministic
      }>>
      / unprotected / {},
      / payload     / h'a0d3af9e...c893b5e3', # digest above
@@ -338,10 +338,10 @@ Mih & Sokolov             Expires 3 April 2027                  [Page 6]
 Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
-   preimage-content-type (259) to application/swid+cbor and payload-
-   preimage-encoding to core-deterministic (Value 1) -- recording its
-   own choice, not a CoSWID requirement -- so that a verifier holding
-   the decoded tag knows how to re-create the preimage.
+   preimage-content-type (259) to application/swid+cbor and
+   deterministic-encodings to core-deterministic (Value 1) -- recording
+   its own choice, not a CoSWID requirement -- so that a verifier
+   holding the decoded tag knows how to re-create the preimage.
 
 6.  Security Considerations
 
@@ -394,18 +394,18 @@ Mih & Sokolov             Expires 3 April 2027                  [Page 7]
 Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
-    +=========+===========+=====+=============+=============+=========+
-    |Name     |Label      |Value|Value        |Description  |Reference|
-    |         |           |Type |Registry     |             |         |
-    +=========+===========+=====+=============+=============+=========+
-    |payload- |TBD_1      |int  |COSE         |Deterministic|This     |
-    |preimage-|(requested)|     |Deterministic|encoding     |document |
-    |encoding |           |     |Encodings    |applied to   |         |
-    |         |           |     |(Section 8.2)|create the   |         |
-    |         |           |     |             |preimage of a|         |
-    |         |           |     |             |Hash Envelope|         |
-    |         |           |     |             |payload      |         |
-    +---------+-----------+-----+-------------+-------------+---------+
+   +==============+===========+=====+=============+=============+=========+
+   |Name          |Label      |Value|Value        |Description  |Reference|
+   |              |           |Type |Registry     |             |         |
+   +==============+===========+=====+=============+=============+=========+
+   |deterministic-|TBD_1      |int  |COSE         |Deterministic|This     |
+   |encodings     |(requested)|     |Deterministic|encoding     |document |
+   |              |           |     |Encodings    |applied to   |         |
+   |              |           |     |(Section 8.2)|create the   |         |
+   |              |           |     |             |preimage of a|         |
+   |              |           |     |             |Hash Envelope|         |
+   |              |           |     |             |payload      |         |
+   +--------------+-----------+-----+-------------+-------------+---------+
 
                                   Table 1
 
@@ -417,12 +417,12 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    IANA is requested to create a new registry, "COSE Deterministic
    Encodings".  The registry identifies deterministic encodings of
    structured content; it carries no Hash Envelope semantics of its own,
-   and a value is meaningful only through a parameter, such as payload-
-   preimage-encoding (Section 3), that gives it a role.  The registry is
-   not specific to one data model or content type: an entry applies
-   wherever preimage-content-type (259) matches its Applicable Content
-   Types (Section 4.2), and encodings for other structured content types
-   can be registered under the policy below.
+   and a value is meaningful only through a parameter, such as
+   deterministic-encodings (Section 3), that gives it a role.  The
+   registry is not specific to one data model or content type: an entry
+   applies wherever preimage-content-type (259) matches its Applicable
+   Content Types (Section 4.2), and encodings for other structured
+   content types can be registered under the policy below.
 
    A registry is used, rather than a fixed reference, for the reasons in
    Section 1.  A profile that has its own media type, such as

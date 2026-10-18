@@ -8,7 +8,7 @@ may be in use, and the Hash Envelope does not identify which one produced the
 hashed bytes — so a verifier cannot reliably recompute the hash. This draft
 defines a small IANA registry of deterministic encodings that any COSE usage can
 reference, and one Hash Envelope protected-header parameter
-(`payload-preimage-encoding`) as its first user, naming the deterministic
+(`deterministic-encodings`) as its first user, naming the deterministic
 encoding a producer applied before hashing a Hash Envelope payload. The registry
 is populated at issuance with `core-deterministic` (the Core Deterministic
 Encoding Requirements of RFC 8949 §4.2.1). It extends the Hash Envelope through
