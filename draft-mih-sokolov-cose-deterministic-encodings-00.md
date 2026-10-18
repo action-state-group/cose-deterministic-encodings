@@ -42,6 +42,7 @@ normative:
   RFC9995:
 
 informative:
+  RFC7942:
   RFC9393:
   I-D.ietf-cbor-serialization:
   DAG-CBOR:
@@ -302,6 +303,69 @@ Requirements before hashing a CoSWID tag sets preimage-content-type (259) to
 application/swid+cbor and deterministic-encodings to core-deterministic
 (Value 1) -- recording its own choice, not a CoSWID requirement -- so that a
 verifier holding the decoded tag knows how to re-create the preimage.
+
+# Implementation Status {#impl-status}
+
+Note to the RFC Editor: please remove this section, and the reference to
+{{RFC7942}}, before publication.
+
+This section records the status of known implementations of the protocol
+defined by this specification at the time of posting of this
+Internet-Draft, and is based on a proposal described in {{RFC7942}}. The
+description of implementations in this section is intended to assist the
+IETF in its decision processes in progressing drafts to RFCs. Please note
+that the listing of any individual implementation here does not imply
+endorsement by the IETF. Furthermore, no effort has been spent to verify
+the information presented here that was supplied by IETF contributors.
+This is not intended as, and must not be construed to be, a catalog of
+available implementations or their features. Readers are advised to note
+that other implementations may exist.
+
+According to {{RFC7942}}, "this will allow reviewers and working groups to
+assign due consideration to documents that have the benefit of running
+code, which may serve as evidence of valuable experimentation and feedback
+that have made the implemented protocols more mature. It is up to the
+individual working groups to use this information as they see fit".
+
+## Reference Emitter and Verifier
+
+Organization:
+: The authors of this document.
+
+Description:
+: A minimal emitter and verifier, one in Python and one in Go, each using
+  only its language's standard library, with a shared set of test vectors.
+  The emitter encodes a structured value under core-deterministic, hashes
+  it, and builds the Hash Envelope protected header; the verifier checks a
+  content binding and reports verified, failed, or unverified. The vectors
+  include the example in {{examples}}, whose preimage and digest both test
+  suites read from the text of this document.
+
+Implementation:
+: https://github.com/action-state-group/cose-deterministic-encodings
+  (directories lib/python, lib/go, and vectors).
+
+Level of maturity:
+: A reference written alongside this document, for review and interoperability
+  testing; not intended for production use.
+
+Coverage:
+: The header parameter with value 1 (core-deterministic), using the
+  suggested value 271 for TBD\_1; the consistency check of {{consistency}},
+  including structured syntax suffixes and a subset of the CoAP
+  Content-Formats registry; the three outcomes of {{verification}}; and
+  payload-hash-alg values -16, -43, and -44 (SHA-256, SHA-384, and SHA-512).
+  It does not create or validate signatures, does not encode NaN, and does
+  not encode integers outside the 64-bit range of CBOR major types 0 and 1.
+
+Licensing:
+: Revised BSD License.
+
+Contact:
+: The authors of this document.
+
+Information last updated:
+: 2026-10-18.
 
 # Security Considerations {#security}
 

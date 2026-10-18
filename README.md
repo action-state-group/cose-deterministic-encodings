@@ -41,5 +41,24 @@ make idnits     # run the idnits checker over the .txt
 make clean
 ```
 
+## Reference code and vectors
+
+A minimal emitter and verifier for the `deterministic-encodings` header, in
+Python (`lib/python/`) and Go (`lib/go/`), each using only its standard
+library, and a shared set of vectors (`vectors/vectors.json`). The emitter
+encodes a structured value under `core-deterministic` (RFC 8949 §4.2.1),
+hashes it, and builds the Hash Envelope protected header; the verifier
+reports a content binding as verified, failed, or unverified as the draft's
+"Producer and Verifier Behavior" section specifies. Signing is out of scope.
+The vectors include the draft's own example, whose preimage and digest both
+test suites read from the draft text. Label 271 is the value the draft suggests for TBD\_1; it is not an
+assigned value.
+
+```sh
+python3 vectors/generate.py --check           # vectors.json is current
+python3 -m unittest discover -s lib/python
+(cd lib/go && go test ./...)
+```
+
 Current draft:
 [`draft-mih-sokolov-cose-deterministic-encodings-00`](draft-mih-sokolov-cose-deterministic-encodings-00.md).

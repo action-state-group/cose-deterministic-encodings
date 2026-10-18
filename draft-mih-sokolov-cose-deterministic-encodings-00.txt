@@ -189,7 +189,7 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
       with the payload-hash-alg (258) algorithm to produce the payload.
       The value is the integer Value (not the Name) assigned to an
       encoding in the COSE Deterministic Encodings registry
-      (Section 8.2).
+      (Section 9.2).
 
    It extends [RFC9995] by adding one optional member to the
    Hash_Envelope_Protected_Header CDDL of [RFC9995] Section 4, alongside
@@ -239,7 +239,7 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
 4.2.  Consistency with preimage-content-type
 
    Each registered encoding lists the content types it applies to, as
-   the Applicable Content Types of its registry entry (Section 8.2).
+   the Applicable Content Types of its registry entry (Section 9.2).
    When deterministic-encodings is present, preimage-content-type (259)
    MUST also be present, and its value MUST match one of the Applicable
    Content Types of the captured encoding:
@@ -343,7 +343,76 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    its own choice, not a CoSWID requirement -- so that a verifier
    holding the decoded tag knows how to re-create the preimage.
 
-6.  Security Considerations
+6.  Implementation Status
+
+   Note to the RFC Editor: please remove this section, and the reference
+   to [RFC7942], before publication.
+
+   This section records the status of known implementations of the
+   protocol defined by this specification at the time of posting of this
+   Internet-Draft, and is based on a proposal described in [RFC7942].
+   The description of implementations in this section is intended to
+   assist the IETF in its decision processes in progressing drafts to
+   RFCs.  Please note that the listing of any individual implementation
+   here does not imply endorsement by the IETF.  Furthermore, no effort
+   has been spent to verify the information presented here that was
+   supplied by IETF contributors.  This is not intended as, and must not
+   be construed to be, a catalog of available implementations or their
+   features.  Readers are advised to note that other implementations may
+   exist.
+
+   According to [RFC7942], "this will allow reviewers and working groups
+   to assign due consideration to documents that have the benefit of
+   running code, which may serve as evidence of valuable experimentation
+   and feedback that have made the implemented protocols more mature.
+   It is up to the individual working groups to use this information as
+   they see fit".
+
+6.1.  Reference Emitter and Verifier
+
+   Organization:  The authors of this document.
+
+   Description:  A minimal emitter and verifier, one in Python and one
+      in Go, each using only its language's standard library, with a
+      shared set of test vectors.  The emitter encodes a structured
+      value under core-deterministic, hashes it, and builds the Hash
+      Envelope protected header; the verifier checks a content binding
+      and reports verified, failed, or unverified.  The vectors include
+      the example in Section 5, whose preimage and digest both test
+      suites read from the text of this document.
+
+   Implementation:  https://github.com/action-state-group/cose-
+      deterministic-encodings (directories lib/python, lib/go, and
+      vectors).
+
+   Level of maturity:  A reference written alongside this document, for
+
+
+
+Mih & Sokolov             Expires 3 April 2027                  [Page 7]
+
+Internet-Draft        COSE Deterministic Encodings        September 2026
+
+
+      review and interoperability testing; not intended for production
+      use.
+
+   Coverage:  The header parameter with value 1 (core-deterministic),
+      using the suggested value 271 for TBD_1; the consistency check of
+      Section 4.2, including structured syntax suffixes and a subset of
+      the CoAP Content-Formats registry; the three outcomes of
+      Section 4.3; and payload-hash-alg values -16, -43, and -44 (SHA-
+      256, SHA-384, and SHA-512).  It does not create or validate
+      signatures, does not encode NaN, and does not encode integers
+      outside the 64-bit range of CBOR major types 0 and 1.
+
+   Licensing:  Revised BSD License.
+
+   Contact:  The authors of this document.
+
+   Information last updated:  2026-10-18.
+
+7.  Security Considerations
 
    The preimage is the exact octet string the identified encoding
    produces, not a rendering of it.
@@ -367,7 +436,21 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    recomputed digest can differ from the payload, and the content
    binding is then reported as failed.
 
-7.  Privacy Considerations
+
+
+
+
+
+
+
+
+
+Mih & Sokolov             Expires 3 April 2027                  [Page 8]
+
+Internet-Draft        COSE Deterministic Encodings        September 2026
+
+
+8.  Privacy Considerations
 
    A digest over deterministically encoded content is a stable function
    of that content, so the payload is linkable wherever the content
@@ -376,23 +459,14 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    already exists wherever [RFC9995] is used, and identifying the
    encoding removes an ambiguity that might have slowed such an attempt.
 
-8.  IANA Considerations
+9.  IANA Considerations
 
-8.1.  COSE Header Parameters
+9.1.  COSE Header Parameters
 
    IANA is requested to register the following entry in the "COSE Header
    Parameters" registry, in the "Integer values from 256 to 65535"
    range, under the Specification Required policy ([RFC8126]
    Section 4.6) that governs that range:
-
-
-
-
-
-Mih & Sokolov             Expires 3 April 2027                  [Page 7]
-
-Internet-Draft        COSE Deterministic Encodings        September 2026
-
 
    +================+=====+=====+=============+=============+=========+
    | Name           |Label|Value|Value        |Description  |Reference|
@@ -401,7 +475,7 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    | deterministic- |TBD_1|int  |COSE         |Deterministic|This     |
    | encodings      |     |     |Deterministic|encoding     |document |
    |                |     |     |Encodings    |applied to   |         |
-   |                |     |     |(Section 8.2)|create the   |         |
+   |                |     |     |(Section 9.2)|create the   |         |
    |                |     |     |             |preimage of a|         |
    |                |     |     |             |Hash Envelope|         |
    |                |     |     |             |payload      |         |
@@ -413,7 +487,7 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    the "Integer values from 256 to 65535" range of the COSE Header
    Parameters registry as of 2026-10-18.
 
-8.2.  COSE Deterministic Encodings Registry
+9.2.  COSE Deterministic Encodings Registry
 
    IANA is requested to create a new registry, "COSE Deterministic
    Encodings".  The registry identifies deterministic encodings of
@@ -424,6 +498,13 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    applies wherever preimage-content-type (259) matches its Applicable
    Content Types (Section 4.2), and encodings for other structured
    content types can be registered under the policy below.
+
+
+
+Mih & Sokolov             Expires 3 April 2027                  [Page 9]
+
+Internet-Draft        COSE Deterministic Encodings        September 2026
+
 
    A registry is used, rather than a fixed reference, for the reasons in
    Section 1.  A profile that has its own media type, such as
@@ -442,14 +523,6 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    Reference, and Change Controller.  The designated expert checks that
    the referenced specification defines exactly one deterministic
    encoding for the value, together with any constraints on the
-
-
-
-Mih & Sokolov             Expires 3 April 2027                  [Page 8]
-
-Internet-Draft        COSE Deterministic Encodings        September 2026
-
-
    structured values it accepts, and that its Applicable Content Types
    are correct and can be matched as Section 4.2 specifies.  Entries are
    immutable: the registry grows by adding values, never by
@@ -479,11 +552,19 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
    sequence [RFC8742], each data item is encoded according to these
    requirements.  Value 1 is exactly [RFC8949] Section 4.2.1; the
    choices that Section 4.2.2 leaves to a protocol are not part of it
-   (Section 6).
+   (Section 7).
 
-9.  References
 
-9.1.  Normative References
+
+
+Mih & Sokolov             Expires 3 April 2027                 [Page 10]
+
+Internet-Draft        COSE Deterministic Encodings        September 2026
+
+
+10.  References
+
+10.1.  Normative References
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -494,17 +575,6 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
               Specifications and Registration Procedures", BCP 13,
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
               <https://www.rfc-editor.org/rfc/rfc6838>.
-
-
-
-
-
-
-
-Mih & Sokolov             Expires 3 April 2027                  [Page 9]
-
-Internet-Draft        COSE Deterministic Encodings        September 2026
-
 
    [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
               Application Protocol (CoAP)", RFC 7252,
@@ -540,12 +610,20 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
               DOI 10.17487/RFC9052, August 2022,
               <https://www.rfc-editor.org/rfc/rfc9052>.
 
+
+
+
+Mih & Sokolov             Expires 3 April 2027                 [Page 11]
+
+Internet-Draft        COSE Deterministic Encodings        September 2026
+
+
    [RFC9995]  Steele, O., Lasker, S., and H. Birkholz, "CBOR Object
               Signing and Encryption (COSE) Hash Envelope", RFC 9995,
               DOI 10.17487/RFC9995, July 2026,
               <https://www.rfc-editor.org/rfc/rfc9995>.
 
-9.2.  Informative References
+10.2.  Informative References
 
    [CardanoCDDL]
               Intersect MBO, "Conway era ledger CDDL
@@ -553,14 +631,6 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
               <https://github.com/IntersectMBO/cardano-
               ledger/blob/9ef91412ee/eras/conway/impl/cddl/data/
               conway.cddl>.
-
-
-
-
-Mih & Sokolov             Expires 3 April 2027                 [Page 10]
-
-Internet-Draft        COSE Deterministic Encodings        September 2026
-
 
    [DAG-CBOR] IPLD, "Specification: DAG-CBOR", 2026,
               <https://ipld.io/specs/codecs/dag-cbor/spec/>.
@@ -571,6 +641,11 @@ Internet-Draft        COSE Deterministic Encodings        September 2026
               serialization-09, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
               serialization-09>.
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/rfc/rfc7942>.
 
    [RFC9393]  Birkholz, H., Fitzgerald-McKay, J., Schmidt, C., and D.
               Waltermire, "Concise Software Identification Tags",
@@ -588,6 +663,15 @@ Authors' Addresses
    Steven Mih
    Action State Group, Inc.
    Email: spec@actionstate.ai
+
+
+
+
+
+
+Mih & Sokolov             Expires 3 April 2027                 [Page 12]
+
+Internet-Draft        COSE Deterministic Encodings        September 2026
 
 
    Anton Sokolov
@@ -613,4 +697,32 @@ Authors' Addresses
 
 
 
-Mih & Sokolov             Expires 3 April 2027                 [Page 11]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Mih & Sokolov             Expires 3 April 2027                 [Page 13]
