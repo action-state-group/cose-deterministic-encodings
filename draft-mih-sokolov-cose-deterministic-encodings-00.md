@@ -25,8 +25,6 @@ author:
  - ins: A. Sokolov
    name: Anton Sokolov
    organization: Tyche Institute
-   city: Tallinn
-   country: Estonia
    email: anton.sokolov@tyche.institute
 
 normative:
