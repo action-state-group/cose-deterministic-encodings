@@ -33,16 +33,49 @@ class DraftExample(unittest.TestCase):
         self.assertEqual(e.preimage.hex(), preimage)
         self.assertEqual(e.payload.hex(), digest)
 
+    def test_binary64_example_matches_draft_text(self):
+        m = re.search(r"12-octet preimage\s+`([0-9a-f]+)`, whose SHA-256 digest is\s+`([0-9a-f]{64})`",
+                      DRAFT)
+        self.assertIsNotNone(m, "cbor-binary64 example preimage/digest not found in the draft")
+        preimage, digest = m.group(1), m.group(2)
+        case = next(e for e in VECTORS["emit"] if e["id"] == "emit-b64-draft-example")
+        self.assertEqual(case["expected"]["preimage"], preimage)
+        self.assertEqual(case["expected"]["payload"], digest)
+        e = c.emit({"x": 1.5}, "application/cbor", encoding=c.CBOR_BINARY64)
+        self.assertEqual(e.preimage.hex(), preimage)
+        self.assertEqual(e.payload.hex(), digest)
+
 
 class Vectors(unittest.TestCase):
     def test_emit(self):
         for case in VECTORS["emit"]:
             with self.subTest(case["id"]):
                 e = c.emit(c.decode(bytes.fromhex(case["value_cbor"])), case["content_type"],
-                           hash_alg=case["hash_alg"], label=VECTORS["header_label"])
+                           hash_alg=case["hash_alg"], encoding=case.get("encoding", 1),
+                           label=VECTORS["header_label"])
                 self.assertEqual(e.preimage.hex(), case["expected"]["preimage"])
                 self.assertEqual(e.payload.hex(), case["expected"]["payload"])
                 self.assertEqual(e.protected.hex(), case["expected"]["protected"])
+
+    def test_emit_reject(self):
+        for case in VECTORS["emit_reject"]:
+            with self.subTest(case["id"]), self.assertRaises(c.EncodeError):
+                c.emit(c.decode(bytes.fromhex(case["value_cbor"])), case["content_type"],
+                       encoding=case["encoding"], label=VECTORS["header_label"])
+
+    def test_conformance(self):
+        for case in VECTORS["conformance"]:
+            with self.subTest(case["id"]):
+                preimage = bytes.fromhex(case["preimage"])
+                want = case["expected"]
+                self.assertIs(c.conforms(preimage, case["encoding"]), want["conforms"])
+                try:
+                    recreated = c.ENCODINGS[case["encoding"]](c.decode(preimage)).hex()
+                except c.EncodeError:
+                    recreated = None
+                self.assertEqual(recreated, want["recreated"])
+                # Strict check and value rule agree: content that passes is hashed as is.
+                self.assertEqual(want["conforms"], recreated == case["preimage"])
 
     def test_verify(self):
         for case in VECTORS["verify"]:
@@ -70,6 +103,13 @@ class Producer(unittest.TestCase):
         with self.assertRaises(c.EncodeError):
             c.encode_core_deterministic(float("nan"))
 
+    def test_binary64_refuses_json_pairing(self):
+        with self.assertRaises(ValueError):
+            c.emit({"a": 1.5}, "application/json", encoding=c.CBOR_BINARY64)
+
+    def test_unknown_encoding_does_not_conform(self):
+        self.assertFalse(c.conforms(bytes.fromhex("01"), 99))
+
 
 class Floats(unittest.TestCase):
     def test_shortest_form(self):
@@ -82,6 +122,26 @@ class Floats(unittest.TestCase):
                 b = c.encode_core_deterministic(f)
                 self.assertEqual(b.hex(), want)
                 self.assertEqual(c.decode(b), f)
+
+    def test_binary64(self):
+        # The same table as the Go test, TestBinary64Floats.
+        for f, want in [(1.5, "fb3ff8000000000000"), (0.0, "fb0000000000000000"),
+                        (1.0, "fb3ff0000000000000"), (65504.0, "fb40effc0000000000"),
+                        (5.960464477539063e-08, "fb3e70000000000000"),
+                        (100000.0, "fb40f86a0000000000"), (1.1, "fb3ff199999999999a"),
+                        (-4.0, "fbc010000000000000")]:
+            with self.subTest(f):
+                b = c.encode_cbor_binary64(f)
+                self.assertEqual(b.hex(), want)
+                self.assertEqual(c.decode(b), f)
+
+    def test_binary64_keeps_integers(self):
+        self.assertEqual(c.encode_cbor_binary64([1, -1, 1000]).hex(), "830120" + "1903e8")
+
+    def test_binary64_rejects(self):
+        for f in (float("nan"), float("inf"), float("-inf"), -0.0):
+            with self.subTest(f), self.assertRaises(c.EncodeError):
+                c.encode_cbor_binary64(f)
 
 
 class Decoder(unittest.TestCase):

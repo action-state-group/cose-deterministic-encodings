@@ -3,8 +3,11 @@
 package detenc
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"math"
 	"os"
 	"regexp"
 	"testing"
@@ -17,10 +20,26 @@ type vectors struct {
 		ValueCBOR   string          `json:"value_cbor"`
 		ContentType json.RawMessage `json:"content_type"`
 		HashAlg     int64           `json:"hash_alg"`
+		Encoding    int64           `json:"encoding"`
 		Expected    struct {
 			Preimage, Payload, Protected string
 		} `json:"expected"`
 	} `json:"emit"`
+	EmitReject []struct {
+		ID          string          `json:"id"`
+		ValueCBOR   string          `json:"value_cbor"`
+		ContentType json.RawMessage `json:"content_type"`
+		Encoding    int64           `json:"encoding"`
+	} `json:"emit_reject"`
+	Conformance []struct {
+		ID       string `json:"id"`
+		Encoding int64  `json:"encoding"`
+		Preimage string `json:"preimage"`
+		Expected struct {
+			Conforms  bool    `json:"conforms"`
+			Recreated *string `json:"recreated"`
+		} `json:"expected"`
+	} `json:"conformance"`
 	Verify []struct {
 		ID        string  `json:"id"`
 		Protected string  `json:"protected"`
@@ -75,7 +94,11 @@ func TestEmitVectors(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			e, err := Emit(val, contentType(t, c.ContentType), -7, c.HashAlg, v.HeaderLabel)
+			enc := c.Encoding
+			if enc == 0 {
+				enc = CoreDeterministic
+			}
+			e, err := EmitEncoding(val, contentType(t, c.ContentType), -7, c.HashAlg, enc, v.HeaderLabel)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -87,6 +110,51 @@ func TestEmitVectors(t *testing.T) {
 				if pair[0] != pair[1] {
 					t.Errorf("%s = %s, want %s", name, pair[0], pair[1])
 				}
+			}
+		})
+	}
+}
+
+func TestEmitRejectVectors(t *testing.T) {
+	v := load(t)
+	for _, c := range v.EmitReject {
+		t.Run(c.ID, func(t *testing.T) {
+			val, err := Decode(unhex(t, c.ValueCBOR))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = EmitEncoding(val, contentType(t, c.ContentType), -7, -16, c.Encoding, v.HeaderLabel)
+			if !errors.Is(err, ErrEncode) {
+				t.Fatalf("got %v, want ErrEncode", err)
+			}
+		})
+	}
+}
+
+func TestConformanceVectors(t *testing.T) {
+	v := load(t)
+	for _, c := range v.Conformance {
+		t.Run(c.ID, func(t *testing.T) {
+			pre := unhex(t, c.Preimage)
+			if got := Conforms(pre, c.Encoding); got != c.Expected.Conforms {
+				t.Errorf("Conforms = %v, want %v", got, c.Expected.Conforms)
+			}
+			val, err := Decode(pre)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := Encoder(c.Encoding)(val)
+			switch {
+			case c.Expected.Recreated == nil:
+				if !errors.Is(err, ErrEncode) {
+					t.Errorf("got %x, %v; want ErrEncode", out, err)
+				}
+			case err != nil || hex.EncodeToString(out) != *c.Expected.Recreated:
+				t.Errorf("recreated %x, %v; want %s", out, err, *c.Expected.Recreated)
+			}
+			// Strict check and value rule agree: content that passes is hashed as is.
+			if c.Expected.Conforms != (err == nil && bytes.Equal(out, pre)) {
+				t.Errorf("conforms %v but recreated %x", c.Expected.Conforms, out)
 			}
 		})
 	}
@@ -138,6 +206,25 @@ func TestDraftExample(t *testing.T) {
 	}
 }
 
+// The cbor-binary64 example digest, read from the draft text.
+func TestDraftExampleBinary64(t *testing.T) {
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-00.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile("12-octet preimage\\s+`([0-9a-f]+)`, whose SHA-256 digest is\\s+`([0-9a-f]{64})`").FindSubmatch(src)
+	if m == nil {
+		t.Fatal("cbor-binary64 example preimage/digest not found in the draft")
+	}
+	e, err := EmitEncoding(Map{{"x", 1.5}}, "application/cbor", -7, -16, CBORBinary64, LabelDeterministicEncodings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hex.EncodeToString(e.Preimage) != string(m[1]) || hex.EncodeToString(e.Payload) != string(m[2]) {
+		t.Fatalf("got %x / %x, draft says %s / %s", e.Preimage, e.Payload, m[1], m[2])
+	}
+}
+
 func TestHalfFloats(t *testing.T) {
 	for _, c := range []struct {
 		f    float64
@@ -158,6 +245,38 @@ func TestHalfFloats(t *testing.T) {
 	}
 }
 
+func TestBinary64Floats(t *testing.T) {
+	for _, c := range []struct {
+		f    float64
+		want string
+	}{
+		{1.5, "fb3ff8000000000000"}, {0, "fb0000000000000000"}, {1, "fb3ff0000000000000"},
+		{65504, "fb40effc0000000000"}, {5.960464477539063e-08, "fb3e70000000000000"},
+		{100000, "fb40f86a0000000000"}, {1.1, "fb3ff199999999999a"}, {-4, "fbc010000000000000"},
+	} {
+		b, err := EncodeCBORBinary64(c.f)
+		if err != nil || hex.EncodeToString(b) != c.want {
+			t.Errorf("%v: got %x, want %s", c.f, b, c.want)
+		}
+		back, err := Decode(b)
+		if err != nil || back.(float64) != c.f {
+			t.Errorf("%v: round trip gave %v", c.f, back)
+		}
+	}
+	b, err := EncodeCBORBinary64([]any{I(1), I(-1), I(1000)})
+	if err != nil || hex.EncodeToString(b) != "8301201903e8" {
+		t.Errorf("integers: got %x, %v", b, err)
+	}
+	for _, f := range []float64{math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(0, -1)} {
+		if _, err := EncodeCBORBinary64(f); !errors.Is(err, ErrEncode) {
+			t.Errorf("%v: got %v, want ErrEncode", f, err)
+		}
+	}
+	if Conforms([]byte{0x01}, 99) {
+		t.Error("an unknown encoding conforms")
+	}
+}
+
 func TestDecoderRejects(t *testing.T) {
 	for _, h := range []string{"a2616101616102", "0100", "6261", "f818", "1c"} {
 		if _, err := Decode(unhex(t, h)); err == nil {
@@ -169,5 +288,8 @@ func TestDecoderRejects(t *testing.T) {
 func TestProducerRefusesJSON(t *testing.T) {
 	if _, err := Emit(Map{{"a", I(1)}}, "application/json", -7, -16, LabelDeterministicEncodings); err == nil {
 		t.Fatal("emitted core-deterministic with application/json")
+	}
+	if _, err := EmitEncoding(Map{{"a", 1.5}}, "application/json", -7, -16, CBORBinary64, LabelDeterministicEncodings); err == nil {
+		t.Fatal("emitted cbor-binary64 with application/json")
 	}
 }

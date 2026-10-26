@@ -39,6 +39,9 @@ INTRO_MAP_4_2_1 = h("a2 19 03 e8 01 61 61 02")
 INTRO_MAP_4_2_3 = h("a2 61 61 02 19 03 e8 01")
 INTRO_FLOAT_4_2_1 = h("f9 3e 00")
 INTRO_FLOAT_DAG_CBOR = h("fb 3f f8 00 00 00 00 00 00")
+B64_EXAMPLE_PREIMAGE = h("a16178fb3ff8000000000000")
+B64_EXAMPLE_DIGEST = h("daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55")
+B64_EXAMPLE_CORE = h("a16178f93e00")
 
 
 def header(**members) -> bytes:
@@ -50,23 +53,68 @@ def header(**members) -> bytes:
 
 
 def emit_case(cid, description, value_cbor, content_type, hash_alg=-16, expect_preimage=None,
-              expect_payload=None):
+              expect_payload=None, encoding=c.CORE_DETERMINISTIC):
     value = c.decode(value_cbor)
-    e = c.emit(value, content_type, hash_alg=hash_alg)
+    e = c.emit(value, content_type, hash_alg=hash_alg, encoding=encoding)
     if expect_preimage is not None:
         assert e.preimage == expect_preimage, (cid, e.preimage.hex())
     if expect_payload is not None:
         assert e.payload == expect_payload, (cid, e.payload.hex())
-    return {
+    case = {
         "id": cid,
         "description": description,
         "value_cbor": value_cbor.hex(),
         "content_type": content_type,
         "hash_alg": hash_alg,
+    }
+    if encoding != c.CORE_DETERMINISTIC:
+        case["encoding"] = encoding
+    case["expected"] = {
+        "preimage": e.preimage.hex(),
+        "payload": e.payload.hex(),
+        "protected": e.protected.hex(),
+    }
+    return case
+
+
+def emit_reject_case(cid, description, value_cbor, encoding, content_type="application/cbor"):
+    try:
+        c.emit(c.decode(value_cbor), content_type, encoding=encoding)
+    except c.EncodeError:
+        pass
+    else:
+        raise AssertionError((cid, "emitted"))
+    return {
+        "id": cid,
+        "description": description,
+        "value_cbor": value_cbor.hex(),
+        "content_type": content_type,
+        "encoding": encoding,
+    }
+
+
+def conformance_case(cid, description, preimage, encoding, conforms, recreated=None):
+    """Stored content checked against an encoding before it is hashed.
+
+    'recreated' is what the encoding produces for the value the preimage decodes
+    to (None when that value is outside the encoding).  Content conforms exactly
+    when the two are equal, so for conforming content the strict check and the
+    re-encoding of the value hash the same octets.
+    """
+    try:
+        got = c.ENCODINGS[encoding](c.decode(preimage))
+    except c.EncodeError:
+        got = None
+    assert got == (preimage if conforms else recreated), (cid, got and got.hex())
+    assert c.conforms(preimage, encoding) is conforms, cid
+    return {
+        "id": cid,
+        "description": description,
+        "encoding": encoding,
+        "preimage": preimage.hex(),
         "expected": {
-            "preimage": e.preimage.hex(),
-            "payload": e.payload.hex(),
-            "protected": e.protected.hex(),
+            "conforms": conforms,
+            "recreated": got.hex() if got is not None else None,
         },
     }
 
@@ -126,6 +174,93 @@ def build() -> dict:
                   "application/cbor", hash_alg=-43),
         emit_case("emit-content-format", "A Content-Format number (60, application/cbor) as the "
                   "259 value", ex_value, 60),
+        emit_case("emit-b64-draft-example", "The draft's cbor-binary64 example: {\"x\": 1.5}, "
+                  "given in its shortest form, encodes to the 12-octet preimage and digest the "
+                  "draft states", B64_EXAMPLE_CORE, "application/cbor",
+                  expect_preimage=B64_EXAMPLE_PREIMAGE, expect_payload=B64_EXAMPLE_DIGEST,
+                  encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-intro-float", "The draft's Introduction float 1.5, given in its "
+                  "shortest form, encodes as binary64", INTRO_FLOAT_4_2_1, "application/cbor",
+                  expect_preimage=INTRO_FLOAT_DAG_CBOR, encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-key-order", "The draft's Introduction map under cbor-binary64: the "
+                  "key order of RFC 8949 Section 4.2.1 still applies",
+                  INTRO_MAP_4_2_3, "application/cbor", expect_preimage=INTRO_MAP_4_2_1,
+                  encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-integers", "Integers stay integers in their shortest head; only "
+                  "the floats 1.0 and -1.0 become binary64",
+                  h("84 01 f9 3c 00 20 f9 bc 00"), "application/cbor",
+                  expect_preimage=h("84 01 fb 3f f0 00 00 00 00 00 00 20 fb bf f0 00 00 00 00 00 00"),
+                  encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-int-float-keys", "1 and 1.0 as keys of one map, in bytewise order",
+                  h("a2 01 f5 f9 3c 00 f4"), "application/cbor",
+                  expect_preimage=h("a2 01 f5 fb 3f f0 00 00 00 00 00 00 f4"),
+                  encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-positive-zero", "Positive zero is inside the encoding",
+                  h("a1 61 7a f9 00 00"), "application/cbor",
+                  expect_preimage=h("a1 61 7a fb 00 00 00 00 00 00 00 00"),
+                  encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-nested", "The nested value of emit-nested under cbor-binary64",
+                  h("a5 63 6b 65 79 82 20 38 63 61 7a f6 18 64 c1 1a 5f 5e 10 00 62 62 62 a2 61 79 "
+                    "f5 61 78 f4 41 00 fb 40 f8 6a 00 00 00 00 00"),
+                  "application/swid+cbor", encoding=c.CBOR_BINARY64),
+        emit_case("emit-b64-content-format", "cbor-binary64 with Content-Format 60 "
+                  "(application/cbor) as the 259 value", B64_EXAMPLE_CORE, 60,
+                  encoding=c.CBOR_BINARY64),
+    ]
+
+    emit_reject = [
+        emit_reject_case("reject-b64-nan", "NaN is outside cbor-binary64",
+                         h("a1 61 78 f9 7e 00"), c.CBOR_BINARY64),
+        emit_reject_case("reject-b64-plus-inf", "Positive infinity is outside cbor-binary64",
+                         h("a1 61 78 f9 7c 00"), c.CBOR_BINARY64),
+        emit_reject_case("reject-b64-minus-inf", "Negative infinity is outside cbor-binary64",
+                         h("a1 61 78 f9 fc 00"), c.CBOR_BINARY64),
+        emit_reject_case("reject-b64-negative-zero", "Negative zero is outside cbor-binary64",
+                         h("a1 61 78 f9 80 00"), c.CBOR_BINARY64),
+        emit_reject_case("reject-b64-negative-zero-binary64", "Negative zero given as binary64 "
+                         "is still outside cbor-binary64",
+                         h("a1 61 78 fb 80 00 00 00 00 00 00 00"), c.CBOR_BINARY64),
+        emit_reject_case("reject-b64-nested", "Negative zero deep inside an array",
+                         h("82 01 a1 61 79 f9 80 00"), c.CBOR_BINARY64),
+        emit_reject_case("reject-b64-tagged", "NaN as the content of a tag",
+                         h("c1 fb 7f f8 00 00 00 00 00 00"), c.CBOR_BINARY64),
+    ]
+
+    conformance = [
+        conformance_case("conform-b64-draft-example", "The draft's cbor-binary64 preimage "
+                         "conforms", B64_EXAMPLE_PREIMAGE, c.CBOR_BINARY64, True),
+        conformance_case("conform-b64-nested", "The emit-b64-nested preimage conforms",
+                         h(next(e for e in emit_cases if e["id"] == "emit-b64-nested")
+                           ["expected"]["preimage"]), c.CBOR_BINARY64, True),
+        conformance_case("conform-b64-integer", "An integer where a float might be expected "
+                         "conforms: it is a different value, not a different encoding",
+                         h("a1 61 78 01"), c.CBOR_BINARY64, True),
+        conformance_case("conform-b64-shortest-float", "A float in its shortest form does not "
+                         "conform", B64_EXAMPLE_CORE, c.CBOR_BINARY64, False,
+                         recreated=B64_EXAMPLE_PREIMAGE),
+        conformance_case("conform-b64-key-order", "Length-first key order does not conform",
+                         INTRO_MAP_4_2_3, c.CBOR_BINARY64, False, recreated=INTRO_MAP_4_2_1),
+        conformance_case("conform-b64-indefinite", "An indefinite-length array does not conform",
+                         h("9f 01 ff"), c.CBOR_BINARY64, False, recreated=h("81 01")),
+        conformance_case("conform-b64-non-preferred-int", "An integer in a longer head than "
+                         "needed does not conform", h("a1 61 78 18 01"), c.CBOR_BINARY64, False,
+                         recreated=h("a1 61 78 01")),
+        conformance_case("conform-b64-negative-zero", "Binary64 negative zero does not conform, "
+                         "and no conforming preimage exists for its value",
+                         h("a1 61 78 fb 80 00 00 00 00 00 00 00"), c.CBOR_BINARY64, False),
+        conformance_case("conform-b64-nan", "Binary64 NaN does not conform",
+                         h("a1 61 78 fb 7f f8 00 00 00 00 00 00"), c.CBOR_BINARY64, False),
+        conformance_case("conform-b64-inf", "Binary64 positive infinity does not conform",
+                         h("a1 61 78 fb 7f f0 00 00 00 00 00 00"), c.CBOR_BINARY64, False),
+        conformance_case("conform-core-draft-example", "The draft's core-deterministic "
+                         "preimage conforms to value 1", DRAFT_EXAMPLE_PREIMAGE,
+                         c.CORE_DETERMINISTIC, True),
+        conformance_case("conform-core-binary64", "The cbor-binary64 preimage does not conform "
+                         "to value 1", B64_EXAMPLE_PREIMAGE, c.CORE_DETERMINISTIC, False,
+                         recreated=B64_EXAMPLE_CORE),
+        conformance_case("conform-core-negative-zero", "Negative zero in its shortest form "
+                         "conforms to value 1", h("a1 61 78 f9 80 00"), c.CORE_DETERMINISTIC,
+                         True),
     ]
 
     ok = header(alg=-7, hash=-16, ctype="application/cbor", enc=1)
@@ -133,6 +268,9 @@ def build() -> dict:
     dag_pre = h("a1 61 78 fb 3f f8 00 00 00 00 00 00")  # {"x": 1.5}, binary64 float
     f16_pre = h("a1 61 78 f9 3e 00")  # {"x": 1.5}, RFC 8949 Section 4.2.1
     len_first_pre = INTRO_MAP_4_2_3
+    ok2 = header(alg=-7, hash=-16, ctype="application/cbor", enc=2)
+    b64_dig = B64_EXAMPLE_DIGEST
+    nz_b64_pre = h("a1 61 78 fb 80 00 00 00 00 00 00 00")  # {"x": -0.0}, binary64
 
     verify_cases = [
         verify_case("verify-preimage", "Holds the preimage; digest matches", ok, ex_dig,
@@ -214,15 +352,59 @@ def build() -> dict:
         verify_case("verify-hash-alg-unknown", "A payload-hash-alg the verifier does not "
                     "implement", header(alg=-7, hash=-999, ctype="application/cbor", enc=1),
                     ex_dig, "unverified", "hash-alg-not-implemented", preimage=ex_pre),
+        verify_case("verify-b64-preimage", "cbor-binary64: holds the preimage; digest matches",
+                    ok2, b64_dig, "verified", "preimage-digest-match", preimage=dag_pre),
+        verify_case("verify-b64-value", "cbor-binary64: holds a value whose float arrived in "
+                    "its shortest form; value 2 re-creates the binary64 preimage", ok2, b64_dig,
+                    "verified", "recreated-digest-match", value_cbor=f16_pre),
+        verify_case("verify-b64-value-binary64", "cbor-binary64: holds a value whose float "
+                    "arrived as binary64", ok2, b64_dig, "verified", "recreated-digest-match",
+                    value_cbor=dag_pre),
+        verify_case("verify-b64-value-modified", "cbor-binary64: holds a modified value",
+                    ok2, b64_dig, "failed", "recreated-digest-mismatch",
+                    value_cbor=h("a1 61 78 f9 3e 01")),
+        verify_case("verify-b64-shortest-hashed", "The producer hashed shortest-form floats "
+                    "(value 1) but claimed value 2", ok2, sha256(f16_pre), "failed",
+                    "recreated-digest-mismatch", value_cbor=f16_pre),
+        verify_case("verify-b64-shortest-preimage", "The same envelope, holding the "
+                    "shortest-form preimage itself: the RFC 9995 check passes",
+                    ok2, sha256(f16_pre), "verified", "preimage-digest-match", preimage=f16_pre),
+        verify_case("verify-b64-ctype-json", "cbor-binary64 paired with application/json",
+                    header(alg=-7, hash=-16, ctype="application/json", enc=2), b64_dig, "failed",
+                    "content-type-mismatch", preimage=dag_pre),
+        verify_case("verify-b64-ctype-absent", "cbor-binary64 without 259",
+                    header(alg=-7, hash=-16, enc=2), b64_dig, "failed", "content-type-absent",
+                    value_cbor=f16_pre),
+        verify_case("verify-b64-ctype-suffix", "cbor-binary64 with a +cbor structured syntax "
+                    "suffix", header(alg=-7, hash=-16, ctype="application/swid+cbor", enc=2),
+                    b64_dig, "verified", "recreated-digest-match", value_cbor=f16_pre),
+        verify_case("verify-b64-value-negative-zero", "cbor-binary64: holds a value with "
+                    "negative zero, which the encoding cannot encode", ok2, sha256(nz_b64_pre),
+                    "unverified", "value-not-encodable", value_cbor=h("a1 61 78 f9 80 00")),
+        verify_case("verify-b64-value-nan", "cbor-binary64: holds a value with NaN", ok2,
+                    sha256(h("a1 61 78 fb 7f f8 00 00 00 00 00 00")), "unverified",
+                    "value-not-encodable", value_cbor=h("a1 61 78 f9 7e 00")),
+        verify_case("verify-b64-preimage-negative-zero", "A held preimage is hashed as it is: "
+                    "the RFC 9995 check does not test conformance", ok2, sha256(nz_b64_pre),
+                    "verified", "preimage-digest-match", preimage=nz_b64_pre),
     ]
     return {
         "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header "
                        "label 271 is the value the draft suggests for TBD_1; it is not "
-                       "assigned. 'protected' is the serialized protected header map. A "
-                       "verifier holding 'value_cbor' decodes it and re-creates the preimage; "
-                       "one holding 'preimage' hashes it.",
+                       "assigned. 'protected' is the serialized protected header map. An "
+                       "'encoding' member is a value of the COSE Deterministic Encodings "
+                       "registry; an emit case without one uses value 1. A verifier holding "
+                       "'value_cbor' decodes it and re-creates the preimage; one holding "
+                       "'preimage' hashes it. An 'emit_reject' case is a value the encoding "
+                       "cannot encode: a producer emits no envelope for it. A 'conformance' "
+                       "case is stored content checked before hashing: 'recreated' is what the "
+                       "encoding produces for the decoded value (null when the value is outside "
+                       "the encoding), and the content conforms exactly when 'recreated' equals "
+                       "'preimage'.",
         "header_label": L,
         "emit": emit_cases,
+        "emit_reject": emit_reject,
+        "conformance": conformance,
         "verify": verify_cases,
     }
 

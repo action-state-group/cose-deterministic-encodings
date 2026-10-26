@@ -1,5 +1,5 @@
 {
-  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it.",
+  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. An 'encoding' member is a value of the COSE Deterministic Encodings registry; an emit case without one uses value 1. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it. An 'emit_reject' case is a value the encoding cannot encode: a producer emits no envelope for it. A 'conformance' case is stored content checked before hashing: 'recreated' is what the encoding produces for the decoded value (null when the value is outside the encoding), and the content conforms exactly when 'recreated' equals 'preimage'.",
   "header_label": 271,
   "emit": [
     {
@@ -96,6 +96,293 @@
         "preimage": "a2616101616202",
         "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
         "protected": "a401261901022f190103183c19010f01"
+      }
+    },
+    {
+      "id": "emit-b64-draft-example",
+      "description": "The draft's cbor-binary64 example: {\"x\": 1.5}, given in its shortest form, encodes to the 12-octet preimage and digest the draft states",
+      "value_cbor": "a16178f93e00",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "a16178fb3ff8000000000000",
+        "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-intro-float",
+      "description": "The draft's Introduction float 1.5, given in its shortest form, encodes as binary64",
+      "value_cbor": "f93e00",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "fb3ff8000000000000",
+        "payload": "3a447a89cc973d3a3de5cf77ad9948f4b23c1c07621cdfef84ae78345505e516",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-key-order",
+      "description": "The draft's Introduction map under cbor-binary64: the key order of RFC 8949 Section 4.2.1 still applies",
+      "value_cbor": "a26161021903e801",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "a21903e801616102",
+        "payload": "719e2b2869214afb47253271127de0876d602539965acbc8f132caff004d7a22",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-integers",
+      "description": "Integers stay integers in their shortest head; only the floats 1.0 and -1.0 become binary64",
+      "value_cbor": "8401f93c0020f9bc00",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "8401fb3ff000000000000020fbbff0000000000000",
+        "payload": "1fe2d7b1550c898b014782663169a6dcd74828a29cbb7ee109a11e36f39f5502",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-int-float-keys",
+      "description": "1 and 1.0 as keys of one map, in bytewise order",
+      "value_cbor": "a201f5f93c00f4",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "a201f5fb3ff0000000000000f4",
+        "payload": "f5fdec70eb20e0af4ff852b90dc640918d86ef19b9fccb55e5985c91608cc888",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-positive-zero",
+      "description": "Positive zero is inside the encoding",
+      "value_cbor": "a1617af90000",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "a1617afb0000000000000000",
+        "payload": "24fd753d30313dc21091cfad4d274f49d7d797f48804a091c3ce603902a1ecc9",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-nested",
+      "description": "The nested value of emit-nested under cbor-binary64",
+      "value_cbor": "a5636b657982203863617af61864c11a5f5e1000626262a26179f56178f44100fb40f86a0000000000",
+      "content_type": "application/swid+cbor",
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "a51864c11a5f5e10004100fb40f86a0000000000617af6626262a26178f46179f5636b657982203863",
+        "payload": "6c0c28004171a3581a4e9262afc0b924de3ad600e7e9636183a6e5e276fd6908",
+        "protected": "a401261901022f190103756170706c69636174696f6e2f737769642b63626f7219010f02"
+      }
+    },
+    {
+      "id": "emit-b64-content-format",
+      "description": "cbor-binary64 with Content-Format 60 (application/cbor) as the 259 value",
+      "value_cbor": "a16178f93e00",
+      "content_type": 60,
+      "hash_alg": -16,
+      "encoding": 2,
+      "expected": {
+        "preimage": "a16178fb3ff8000000000000",
+        "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+        "protected": "a401261901022f190103183c19010f02"
+      }
+    }
+  ],
+  "emit_reject": [
+    {
+      "id": "reject-b64-nan",
+      "description": "NaN is outside cbor-binary64",
+      "value_cbor": "a16178f97e00",
+      "content_type": "application/cbor",
+      "encoding": 2
+    },
+    {
+      "id": "reject-b64-plus-inf",
+      "description": "Positive infinity is outside cbor-binary64",
+      "value_cbor": "a16178f97c00",
+      "content_type": "application/cbor",
+      "encoding": 2
+    },
+    {
+      "id": "reject-b64-minus-inf",
+      "description": "Negative infinity is outside cbor-binary64",
+      "value_cbor": "a16178f9fc00",
+      "content_type": "application/cbor",
+      "encoding": 2
+    },
+    {
+      "id": "reject-b64-negative-zero",
+      "description": "Negative zero is outside cbor-binary64",
+      "value_cbor": "a16178f98000",
+      "content_type": "application/cbor",
+      "encoding": 2
+    },
+    {
+      "id": "reject-b64-negative-zero-binary64",
+      "description": "Negative zero given as binary64 is still outside cbor-binary64",
+      "value_cbor": "a16178fb8000000000000000",
+      "content_type": "application/cbor",
+      "encoding": 2
+    },
+    {
+      "id": "reject-b64-nested",
+      "description": "Negative zero deep inside an array",
+      "value_cbor": "8201a16179f98000",
+      "content_type": "application/cbor",
+      "encoding": 2
+    },
+    {
+      "id": "reject-b64-tagged",
+      "description": "NaN as the content of a tag",
+      "value_cbor": "c1fb7ff8000000000000",
+      "content_type": "application/cbor",
+      "encoding": 2
+    }
+  ],
+  "conformance": [
+    {
+      "id": "conform-b64-draft-example",
+      "description": "The draft's cbor-binary64 preimage conforms",
+      "encoding": 2,
+      "preimage": "a16178fb3ff8000000000000",
+      "expected": {
+        "conforms": true,
+        "recreated": "a16178fb3ff8000000000000"
+      }
+    },
+    {
+      "id": "conform-b64-nested",
+      "description": "The emit-b64-nested preimage conforms",
+      "encoding": 2,
+      "preimage": "a51864c11a5f5e10004100fb40f86a0000000000617af6626262a26178f46179f5636b657982203863",
+      "expected": {
+        "conforms": true,
+        "recreated": "a51864c11a5f5e10004100fb40f86a0000000000617af6626262a26178f46179f5636b657982203863"
+      }
+    },
+    {
+      "id": "conform-b64-integer",
+      "description": "An integer where a float might be expected conforms: it is a different value, not a different encoding",
+      "encoding": 2,
+      "preimage": "a1617801",
+      "expected": {
+        "conforms": true,
+        "recreated": "a1617801"
+      }
+    },
+    {
+      "id": "conform-b64-shortest-float",
+      "description": "A float in its shortest form does not conform",
+      "encoding": 2,
+      "preimage": "a16178f93e00",
+      "expected": {
+        "conforms": false,
+        "recreated": "a16178fb3ff8000000000000"
+      }
+    },
+    {
+      "id": "conform-b64-key-order",
+      "description": "Length-first key order does not conform",
+      "encoding": 2,
+      "preimage": "a26161021903e801",
+      "expected": {
+        "conforms": false,
+        "recreated": "a21903e801616102"
+      }
+    },
+    {
+      "id": "conform-b64-indefinite",
+      "description": "An indefinite-length array does not conform",
+      "encoding": 2,
+      "preimage": "9f01ff",
+      "expected": {
+        "conforms": false,
+        "recreated": "8101"
+      }
+    },
+    {
+      "id": "conform-b64-non-preferred-int",
+      "description": "An integer in a longer head than needed does not conform",
+      "encoding": 2,
+      "preimage": "a161781801",
+      "expected": {
+        "conforms": false,
+        "recreated": "a1617801"
+      }
+    },
+    {
+      "id": "conform-b64-negative-zero",
+      "description": "Binary64 negative zero does not conform, and no conforming preimage exists for its value",
+      "encoding": 2,
+      "preimage": "a16178fb8000000000000000",
+      "expected": {
+        "conforms": false,
+        "recreated": null
+      }
+    },
+    {
+      "id": "conform-b64-nan",
+      "description": "Binary64 NaN does not conform",
+      "encoding": 2,
+      "preimage": "a16178fb7ff8000000000000",
+      "expected": {
+        "conforms": false,
+        "recreated": null
+      }
+    },
+    {
+      "id": "conform-b64-inf",
+      "description": "Binary64 positive infinity does not conform",
+      "encoding": 2,
+      "preimage": "a16178fb7ff0000000000000",
+      "expected": {
+        "conforms": false,
+        "recreated": null
+      }
+    },
+    {
+      "id": "conform-core-draft-example",
+      "description": "The draft's core-deterministic preimage conforms to value 1",
+      "encoding": 1,
+      "preimage": "a2616101616202",
+      "expected": {
+        "conforms": true,
+        "recreated": "a2616101616202"
+      }
+    },
+    {
+      "id": "conform-core-binary64",
+      "description": "The cbor-binary64 preimage does not conform to value 1",
+      "encoding": 1,
+      "preimage": "a16178fb3ff8000000000000",
+      "expected": {
+        "conforms": false,
+        "recreated": "a16178f93e00"
+      }
+    },
+    {
+      "id": "conform-core-negative-zero",
+      "description": "Negative zero in its shortest form conforms to value 1",
+      "encoding": 1,
+      "preimage": "a16178f98000",
+      "expected": {
+        "conforms": true,
+        "recreated": "a16178f98000"
       }
     }
   ],
@@ -372,6 +659,138 @@
       "expected": {
         "outcome": "unverified",
         "reason": "hash-alg-not-implemented"
+      }
+    },
+    {
+      "id": "verify-b64-preimage",
+      "description": "cbor-binary64: holds the preimage; digest matches",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "preimage": "a16178fb3ff8000000000000",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-b64-value",
+      "description": "cbor-binary64: holds a value whose float arrived in its shortest form; value 2 re-creates the binary64 preimage",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "value_cbor": "a16178f93e00",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-b64-value-binary64",
+      "description": "cbor-binary64: holds a value whose float arrived as binary64",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "value_cbor": "a16178fb3ff8000000000000",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-b64-value-modified",
+      "description": "cbor-binary64: holds a modified value",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "value_cbor": "a16178f93e01",
+      "expected": {
+        "outcome": "failed",
+        "reason": "recreated-digest-mismatch"
+      }
+    },
+    {
+      "id": "verify-b64-shortest-hashed",
+      "description": "The producer hashed shortest-form floats (value 1) but claimed value 2",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "245066af3231e02b2ea53d2f7724b186111d01e64587af718492c0891a48796e",
+      "value_cbor": "a16178f93e00",
+      "expected": {
+        "outcome": "failed",
+        "reason": "recreated-digest-mismatch"
+      }
+    },
+    {
+      "id": "verify-b64-shortest-preimage",
+      "description": "The same envelope, holding the shortest-form preimage itself: the RFC 9995 check passes",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "245066af3231e02b2ea53d2f7724b186111d01e64587af718492c0891a48796e",
+      "preimage": "a16178f93e00",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-b64-ctype-json",
+      "description": "cbor-binary64 paired with application/json",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "preimage": "a16178fb3ff8000000000000",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-mismatch"
+      }
+    },
+    {
+      "id": "verify-b64-ctype-absent",
+      "description": "cbor-binary64 without 259",
+      "protected": "a301261901022f19010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "value_cbor": "a16178f93e00",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-absent"
+      }
+    },
+    {
+      "id": "verify-b64-ctype-suffix",
+      "description": "cbor-binary64 with a +cbor structured syntax suffix",
+      "protected": "a401261901022f190103756170706c69636174696f6e2f737769642b63626f7219010f02",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "value_cbor": "a16178f93e00",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-b64-value-negative-zero",
+      "description": "cbor-binary64: holds a value with negative zero, which the encoding cannot encode",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "2b11843267ad776cc0dc449cd3cae623d374cb591f5e8832d7cfaaae305963db",
+      "value_cbor": "a16178f98000",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "value-not-encodable"
+      }
+    },
+    {
+      "id": "verify-b64-value-nan",
+      "description": "cbor-binary64: holds a value with NaN",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "9f500b65887e4c3dbb473f3a830f33b3187bbf86eb3d731e90b2cd47be005a4b",
+      "value_cbor": "a16178f97e00",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "value-not-encodable"
+      }
+    },
+    {
+      "id": "verify-b64-preimage-negative-zero",
+      "description": "A held preimage is hashed as it is: the RFC 9995 check does not test conformance",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f02",
+      "payload": "2b11843267ad776cc0dc449cd3cae623d374cb591f5e8832d7cfaaae305963db",
+      "preimage": "a16178fb8000000000000000",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
       }
     }
   ]
