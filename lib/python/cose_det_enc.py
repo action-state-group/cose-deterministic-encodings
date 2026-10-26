@@ -5,8 +5,8 @@ A minimal, standard-library-only reference for
 draft-mih-sokolov-cose-deterministic-encodings.  It builds the protected header
 and payload of a COSE Hash Envelope (RFC 9995) whose preimage is a structured
 value encoded under the Core Deterministic Encoding Requirements (RFC 8949
-Section 4.2.1), and checks a content binding, reporting verified, failed or
-unverified as the draft's "Producer
+Section 4.2.1) or under cbor-binary64, and checks a content binding, reporting
+verified, failed or unverified as the draft's "Producer
 and Verifier Behavior" section specifies.
 
 Signing is out of scope: the header parameter concerns the content binding,
@@ -22,7 +22,7 @@ import hashlib
 import math
 import struct
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 LABEL_ALG = 1
 LABEL_PAYLOAD_HASH_ALG = 258
@@ -31,6 +31,7 @@ LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
 CORE_DETERMINISTIC = 1
+CBOR_BINARY64 = 2
 
 VERIFIED = "verified"
 FAILED = "failed"
@@ -43,7 +44,8 @@ HASH_ALGS = {
     -44: "sha512",
 }
 
-# Applicable Content Types of value 1 (the draft's COSE Deterministic Encodings registry).
+# Applicable Content Types of values 1 and 2 (the draft's COSE Deterministic
+# Encodings registry); value 2 lists the same ones as value 1.
 CORE_DETERMINISTIC_MEDIA_TYPES = frozenset({
     "application/cbor",
     "application/cbor-seq",
@@ -128,8 +130,31 @@ def _float(value: float) -> bytes:
     return bytes([0xFB]) + struct.pack(">d", value)
 
 
+def _float_binary64(value: float) -> bytes:
+    # cbor-binary64: every float as binary64; NaN, the infinities and -0.0 are
+    # outside the encoding.
+    if math.isnan(value) or math.isinf(value):
+        raise EncodeError("NaN and the infinities are outside cbor-binary64")
+    if value == 0 and math.copysign(1.0, value) < 0:
+        raise EncodeError("negative zero is outside cbor-binary64")
+    return bytes([0xFB]) + struct.pack(">d", value)
+
+
 def encode_core_deterministic(value: Any) -> bytes:
     """Encode a structured value under RFC 8949 Section 4.2.1."""
+    return _encode(value, _float)
+
+
+def encode_cbor_binary64(value: Any) -> bytes:
+    """Encode a structured value under cbor-binary64 (value 2).
+
+    RFC 8949 Section 4.2.1, except that every floating-point value is encoded
+    as binary64, and NaN, the infinities and negative zero are rejected.
+    """
+    return _encode(value, _float_binary64)
+
+
+def _encode(value: Any, float_rule: Callable[[float], bytes]) -> bytes:
     if value is False:
         return b"\xf4"
     if value is True:
@@ -141,7 +166,7 @@ def encode_core_deterministic(value: Any) -> bytes:
             return _head(0, value)
         return _head(1, -1 - value)
     if isinstance(value, float):
-        return _float(value)
+        return float_rule(value)
     if isinstance(value, (bytes, bytearray)):
         return _head(2, len(value)) + bytes(value)
     if isinstance(value, str):
@@ -149,16 +174,16 @@ def encode_core_deterministic(value: Any) -> bytes:
         return _head(3, len(raw)) + raw
     if isinstance(value, (dict, Map)):
         pairs = value.items() if isinstance(value, dict) else value
-        items = [(encode_core_deterministic(k), encode_core_deterministic(v)) for k, v in pairs]
+        items = [(_encode(k, float_rule), _encode(v, float_rule)) for k, v in pairs]
         items.sort(key=lambda kv: kv[0])  # bytewise lexicographic order of encoded keys
         for (a, _), (b, _) in zip(items, items[1:]):
             if a == b:
                 raise EncodeError("duplicate map key")
         return _head(5, len(items)) + b"".join(k + v for k, v in items)
     if isinstance(value, (list, tuple)):
-        return _head(4, len(value)) + b"".join(encode_core_deterministic(v) for v in value)
+        return _head(4, len(value)) + b"".join(_encode(v, float_rule) for v in value)
     if isinstance(value, Tag):
-        return _head(6, value.number) + encode_core_deterministic(value.value)
+        return _head(6, value.number) + _encode(value.value, float_rule)
     if isinstance(value, Simple):
         if 24 <= value.value <= 31 or not 0 <= value.value <= 255:
             raise EncodeError("invalid simple value")
@@ -276,7 +301,22 @@ def encode_structured(value: Any) -> bytes:
     return encode_core_deterministic(value)
 
 
-ENCODINGS = {CORE_DETERMINISTIC: encode_structured}
+ENCODINGS = {CORE_DETERMINISTIC: encode_structured, CBOR_BINARY64: encode_cbor_binary64}
+
+
+def conforms(preimage: bytes, encoding: int) -> bool:
+    """True when preimage is exactly what encoding produces for the value it decodes to.
+
+    This is the check of stored content the draft's Security Considerations ask
+    of a producer before hashing.  It accepts or rejects; for content that
+    passes, the octets it would hash are the octets the encoding produces.
+    """
+    if encoding not in ENCODINGS:
+        return False
+    try:
+        return ENCODINGS[encoding](decode(preimage)) == preimage
+    except (DecodeError, EncodeError):
+        return False
 
 
 # --- Applicable Content Types (the draft's consistency check) ------------
@@ -284,7 +324,7 @@ ENCODINGS = {CORE_DETERMINISTIC: encode_structured}
 
 def content_type_matches(encoding: int, content_type: Any) -> bool:
     """True when a 259 value matches the Applicable Content Types of encoding."""
-    if encoding != CORE_DETERMINISTIC:
+    if encoding not in (CORE_DETERMINISTIC, CBOR_BINARY64):
         return False
     if isinstance(content_type, bool):
         return False

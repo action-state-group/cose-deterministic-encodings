@@ -65,8 +65,9 @@ the producer. RFC 8949 describes more than one such encoding for the same
 content type, and the preimage content type does not say which one was
 applied. This document defines a COSE Hash Envelope protected-header
 parameter that identifies the encoding, and an IANA registry of deterministic
-encodings whose initial entry is the Core Deterministic Encoding Requirements
-of RFC 8949.
+encodings whose initial entries are the Core Deterministic Encoding
+Requirements of RFC 8949 and cbor-binary64, a variant of them that encodes
+every floating-point value as binary64.
 
 --- note_Note_to_Readers
 
@@ -115,7 +116,10 @@ different rule.
 
 This document defines one protected-header parameter,
 deterministic-encodings, which identifies that encoding, and a small IANA
-registry of encoding identifiers. It uses the extension point the Hash
+registry of encoding identifiers. The initial entries are the Core
+Deterministic Encoding Requirements and cbor-binary64 ({{cbor-binary64}}), a
+variant of them for producers that encode every floating-point value as
+binary64. It uses the extension point the Hash
 Envelope protected header already provides ({{Section 4 of RFC9995}}:
 `* (int / tstr) => any`). The encoding is not carried as a media-type
 parameter of preimage-content-type (259). The application/cbor media type defines no
@@ -271,6 +275,53 @@ unaffected by any content-binding outcome: a verifier that has not
 established the content binding can still validate the signature of the
 COSE_Sign1 as specified in {{RFC9052}}.
 
+# The cbor-binary64 Encoding {#cbor-binary64}
+
+Some producers encode every floating-point value in the 64-bit form of
+{{RFC8949}} Section 3.3, whatever the value, as {{DAG-CBOR}} requires
+({{intro}}).
+Such content does not follow Section 4.2.1, which requires the shortest form
+that preserves the value, so core-deterministic (Value 1) cannot identify
+it. cbor-binary64 (Value 2) is the Core Deterministic Encoding Requirements
+of {{RFC8949}} Section 4.2.1, with two changes:
+
+1. Every floating-point value is encoded as binary64: major type 7,
+   additional information 27 (initial octet 0xfb), followed by the eight
+   octets of the value. The Section 4.2.1 requirement to use the shortest
+   floating-point form does not apply. Every other requirement of Section
+   4.2.1 applies unchanged, including the shortest arguments for integers,
+   lengths, and tags, definite lengths only, and map keys sorted in the
+   bytewise lexicographic order of their encodings.
+
+2. The structured value contains no NaN, no infinity, and no negative zero.
+   A producer MUST NOT identify cbor-binary64 for a structured value that
+   contains one of them.
+
+Both are choices that {{RFC8949}} Section 4.2.2 leaves to a protocol. The
+width is the width of its Rule 3, which "does not use preferred
+serialization"; unlike Rule 3, cbor-binary64 does not turn integers into
+floating-point values. The integer 1 is `01`, the floating-point value 1.0
+is `fb 3f f0 00 00 00 00 00 00`, and which of the two represents a number is
+a choice of the structured value ({{security}}). Section 4.2.2 also allows an
+application to disallow negative zero. With these values excluded, every
+floating-point value the encoding accepts is a real number, and no two
+accepted values denote the same number. {{DAG-CBOR}} likewise excludes NaN
+and the infinities.
+
+A verifier that holds a structured value containing NaN, an infinity, or
+negative zero, with deterministic-encodings set to cbor-binary64, cannot
+re-create the preimage from it. It MUST NOT report the content binding as
+verified, and MUST report it as unverified rather than as failed. A verifier
+that holds the preimage checks it as {{verification}} describes.
+
+Each structured value the encoding accepts has exactly one encoding under
+it, so decoding a cbor-binary64 preimage and encoding the result again under
+cbor-binary64 reproduces the preimage, provided that decoding preserved the
+value ({{security}}). The check of stored content that {{security}} asks of a
+producer therefore accepts or rejects that content and never changes it:
+content that passes is hashed as stored, and its digest is the one a verifier
+re-creates from the structured value.
+
 # Examples {#examples}
 
 These use Extended Diagnostic Notation ({{RFC8610}} Appendix G), in the
@@ -292,6 +343,26 @@ key order, placing "a" before "b"), gives the 7-octet preimage
   }>>
   / unprotected / {},
   / payload     / h'a0d3af9e...c893b5e3', # digest above
+  / signature   / h'...'  # 64 octets, r || s
+])
+~~~
+
+Under cbor-binary64 ({{cbor-binary64}}), the structured value `{"x": 1.5}`
+gives the 12-octet preimage `a16178fb3ff8000000000000`, whose SHA-256 digest is
+`daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55`. Under
+core-deterministic the same value gives the preimage `a16178f93e00`, with a
+different digest:
+
+~~~
+18([ # COSE_Sign1
+  <<{
+    / alg                     / 1: -7, # ES256
+    / hash algorithm          / 258: -16, # sha-256
+    / preimage type           / 259: "application/cbor",
+    / deterministic encodings / TBD_1: 2, # cbor-binary64
+  }>>
+  / unprotected / {},
+  / payload     / h'daf2cb80...9c747b55', # digest above
   / signature   / h'...'  # 64 octets, r || s
 ])
 ~~~
@@ -320,7 +391,8 @@ tag. Choices that decide which data item represents a value, such as those
 versus floating-point values, belong to the structured value, not to
 the encoding this parameter captures. A choice that changes only how the same
 data item is serialized, such as binary64-only floats, is a different
-encoding and needs its own value. A producer that re-reads stored content before hashing
+encoding and needs its own value; for binary64-only floats that value is
+cbor-binary64 ({{cbor-binary64}}). A producer that re-reads stored content before hashing
 MUST ensure the preimage it hashes is byte-identical to the encoding's own
 output. A verifier that re-creates a preimage from a structured value
 ({{verification}}) needs that value exactly as the producer encoded it;
@@ -390,6 +462,7 @@ Initial contents:
 | Value | Name | Description | Reference | Change Controller |
 | --- | --- | --- | --- | --- |
 | 1 | core-deterministic | Core Deterministic Encoding Requirements | {{RFC8949}} Section 4.2.1 | IETF |
+| 2 | cbor-binary64 | Core Deterministic Encoding Requirements, with every floating-point value as binary64 and no NaN, infinity, or negative zero | This document ({{cbor-binary64}}) | IETF |
 
 The Applicable Content Types of value 1 are application/cbor,
 application/cbor-seq, application/cose, application/cose-key,
@@ -400,6 +473,9 @@ For a CBOR sequence {{RFC8742}}, each data item is encoded according
 to these requirements. Value 1 is exactly {{RFC8949}} Section 4.2.1; the
 choices that Section 4.2.2 leaves to a protocol are not part of it
 ({{security}}).
+
+The Applicable Content Types of value 2 are those of value 1, and a CBOR
+sequence is encoded item by item in the same way.
 
 --- back
 

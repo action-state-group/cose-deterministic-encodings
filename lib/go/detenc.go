@@ -6,8 +6,8 @@
 //
 // It builds the protected header and payload of a COSE Hash Envelope (RFC
 // 9995) whose preimage is a structured value encoded under the Core
-// Deterministic Encoding Requirements (RFC 8949 Section 4.2.1), and checks a
-// content binding, reporting verified, failed or unverified as the draft's
+// Deterministic Encoding Requirements (RFC 8949 Section 4.2.1) or under
+// cbor-binary64, and checks a content binding, reporting verified, failed or unverified as the draft's
 // "Producer and Verifier Behavior" section specifies. Signing is out of scope.
 //
 // The header label is TBD_1 in the draft; 271 is the value it suggests to
@@ -37,8 +37,11 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is value 1 of the COSE Deterministic Encodings registry.
-const CoreDeterministic = 1
+// Values of the COSE Deterministic Encodings registry.
+const (
+	CoreDeterministic = 1
+	CBORBinary64      = 2
+)
 
 // Content-binding outcomes.
 const (
@@ -168,6 +171,19 @@ func fromHalf(h uint16) float64 {
 	return sign * math.Ldexp(1+mant/1024, exp-15)
 }
 
+// encodeBinary64 is the float rule of cbor-binary64: every float as binary64,
+// with NaN, the infinities and -0.0 outside the encoding.
+func encodeBinary64(buf *bytes.Buffer, f float64) error {
+	switch {
+	case math.IsNaN(f), math.IsInf(f, 0):
+		return fmt.Errorf("%w: NaN and the infinities are outside cbor-binary64", ErrEncode)
+	case f == 0 && math.Signbit(f):
+		return fmt.Errorf("%w: negative zero is outside cbor-binary64", ErrEncode)
+	}
+	buf.WriteByte(0xfb)
+	return binary.Write(buf, binary.BigEndian, math.Float64bits(f))
+}
+
 func encodeFloat(buf *bytes.Buffer, f float64) error {
 	if math.IsNaN(f) {
 		return fmt.Errorf("%w: NaN is outside what this reference encodes", ErrEncode)
@@ -184,16 +200,42 @@ func encodeFloat(buf *bytes.Buffer, f float64) error {
 	return binary.Write(buf, binary.BigEndian, math.Float64bits(f))
 }
 
+// floatRule encodes one floating-point value; it is what distinguishes the
+// encodings this package implements.
+type floatRule func(*bytes.Buffer, float64) error
+
 // EncodeCoreDeterministic encodes v under RFC 8949 Section 4.2.1.
 func EncodeCoreDeterministic(v any) ([]byte, error) {
+	return encodeWith(v, encodeFloat)
+}
+
+// EncodeCBORBinary64 encodes v under cbor-binary64 (value 2): RFC 8949
+// Section 4.2.1, except that every floating-point value is encoded as
+// binary64, and NaN, the infinities and negative zero are rejected.
+func EncodeCBORBinary64(v any) ([]byte, error) {
+	return encodeWith(v, encodeBinary64)
+}
+
+// Encoder returns the encoder for a registry value, or nil.
+func Encoder(encoding int64) func(any) ([]byte, error) {
+	switch encoding {
+	case CoreDeterministic:
+		return EncodeCoreDeterministic
+	case CBORBinary64:
+		return EncodeCBORBinary64
+	}
+	return nil
+}
+
+func encodeWith(v any, fr floatRule) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := encode(&buf, v); err != nil {
+	if err := encode(&buf, v, fr); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func encode(buf *bytes.Buffer, v any) error {
+func encode(buf *bytes.Buffer, v any, fr floatRule) error {
 	switch x := v.(type) {
 	case nil:
 		buf.WriteByte(0xf6)
@@ -210,9 +252,9 @@ func encode(buf *bytes.Buffer, v any) error {
 			head(buf, 0, x.N)
 		}
 	case int:
-		return encode(buf, I(int64(x)))
+		return encode(buf, I(int64(x)), fr)
 	case float64:
-		return encodeFloat(buf, x)
+		return fr(buf, x)
 	case []byte:
 		head(buf, 2, uint64(len(x)))
 		buf.Write(x)
@@ -222,7 +264,7 @@ func encode(buf *bytes.Buffer, v any) error {
 	case []any:
 		head(buf, 4, uint64(len(x)))
 		for _, e := range x {
-			if err := encode(buf, e); err != nil {
+			if err := encode(buf, e, fr); err != nil {
 				return err
 			}
 		}
@@ -230,11 +272,11 @@ func encode(buf *bytes.Buffer, v any) error {
 		type kv struct{ k, v []byte }
 		items := make([]kv, len(x))
 		for i, p := range x {
-			k, err := EncodeCoreDeterministic(p.Key)
+			k, err := encodeWith(p.Key, fr)
 			if err != nil {
 				return err
 			}
-			val, err := EncodeCoreDeterministic(p.Value)
+			val, err := encodeWith(p.Value, fr)
 			if err != nil {
 				return err
 			}
@@ -254,7 +296,7 @@ func encode(buf *bytes.Buffer, v any) error {
 		}
 	case Tag:
 		head(buf, 6, x.Number)
-		return encode(buf, x.Value)
+		return encode(buf, x.Value, fr)
 	case Simple:
 		if x >= 24 && x <= 31 {
 			return fmt.Errorf("%w: reserved simple value", ErrEncode)
@@ -501,9 +543,9 @@ var ContentFormats = map[uint64]string{
 }
 
 // ContentTypeMatches reports whether a 259 value matches the Applicable
-// Content Types of the encoding.
+// Content Types of the encoding. Values 1 and 2 list the same ones.
 func ContentTypeMatches(encoding int64, contentType any) bool {
-	if encoding != CoreDeterministic {
+	if encoding != CoreDeterministic && encoding != CBORBinary64 {
 		return false
 	}
 	var media string
@@ -563,14 +605,23 @@ type Emitted struct {
 // Emit encodes value with core-deterministic, hashes it with hashAlg, and
 // builds the serialized protected header (alg, 258, 259 and label).
 func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted, error) {
+	return EmitEncoding(value, contentType, alg, hashAlg, CoreDeterministic, label)
+}
+
+// EmitEncoding is Emit with the encoding given as a registry value.
+func EmitEncoding(value any, contentType any, alg, hashAlg, encoding int64, label int64) (*Emitted, error) {
 	if hasher(hashAlg) == nil {
 		return nil, fmt.Errorf("detenc: hash algorithm %d not implemented", hashAlg)
 	}
-	if !ContentTypeMatches(CoreDeterministic, contentType) {
+	enc := Encoder(encoding)
+	if enc == nil {
+		return nil, fmt.Errorf("detenc: encoding %d not implemented", encoding)
+	}
+	if !ContentTypeMatches(encoding, contentType) {
 		// Consistency with preimage-content-type: a producer MUST NOT emit this pairing.
 		return nil, errors.New("detenc: content type is not an Applicable Content Type of the encoding")
 	}
-	pre, err := EncodeCoreDeterministic(value)
+	pre, err := enc(value)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +629,7 @@ func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted
 		{I(LabelAlg), I(alg)},
 		{I(LabelPayloadHashAlg), I(hashAlg)},
 		{I(LabelPreimageContentType), contentType},
-		{I(label), I(CoreDeterministic)},
+		{I(label), I(encoding)},
 	})
 	if err != nil {
 		return nil, err
@@ -624,7 +675,7 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	encRaw, hasEncoding := header.Get(label)
 	ctype, hasCtype := header.Get(LabelPreimageContentType)
 	enc, isInt := smallInt(encRaw)
-	recognized := hasEncoding && isInt && enc == CoreDeterministic
+	recognized := hasEncoding && isInt && Encoder(enc) != nil
 
 	// Consistency with preimage-content-type: this check comes first.
 	if hasEncoding {
@@ -662,7 +713,7 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	if !implemented {
 		return Result{Unverified, "hash-alg-not-implemented"}, nil
 	}
-	pre, err := EncodeCoreDeterministic(held.Value)
+	pre, err := Encoder(enc)(held.Value)
 	if err != nil {
 		return Result{Unverified, "value-not-encodable"}, nil
 	}
@@ -670,4 +721,22 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 		return Result{Verified, "recreated-digest-match"}, nil
 	}
 	return Result{Failed, "recreated-digest-mismatch"}, nil
+}
+
+// Conforms reports whether preimage is exactly what the encoding produces for
+// the value it decodes to: the check of stored content the draft's Security
+// Considerations ask of a producer before hashing. It accepts or rejects; for
+// content that passes, the octets it would hash are the octets the encoding
+// produces.
+func Conforms(preimage []byte, encoding int64) bool {
+	enc := Encoder(encoding)
+	if enc == nil {
+		return false
+	}
+	v, err := Decode(preimage)
+	if err != nil {
+		return false
+	}
+	out, err := enc(v)
+	return err == nil && bytes.Equal(out, preimage)
 }
