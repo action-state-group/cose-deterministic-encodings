@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-09">
+<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-11">
    <front>
       <title>CBOR Serialization and Determinism</title>
       <author initials="L." surname="Lundblade" fullname="Laurence Lundblade">
          <organization>Security Theory LLC</organization>
       </author>
-      <date month="September" day="28" year="2026" />
+      <date month="October" day="23" year="2026" />
       <abstract>
 	 <t>   RFC 8949 defines CBOR, a standard for serializing data types such as
    integers, strings, and arrays into encoded bytes.  CBOR serialization
@@ -30,6 +30,6 @@
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-09" />
+   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-11" />
    
 </reference>

@@ -586,7 +586,7 @@ choices that Section 4.2.2 leaves to a protocol are not part of it
             <author fullname="Laurence Lundblade" initials="L." surname="Lundblade">
               <organization>Security Theory LLC</organization>
             </author>
-            <date day="28" month="September" year="2026"/>
+            <date day="23" month="October" year="2026"/>
             <abstract>
               <t>   RFC 8949 defines CBOR, a standard for serializing data types such as
    integers, strings, and arrays into encoded bytes.  CBOR serialization
@@ -611,7 +611,7 @@ choices that Section 4.2.2 leaves to a protocol are not part of it
               </t>
             </abstract>
           </front>
-          <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-09"/>
+          <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-11"/>
         </reference>
         <reference anchor="DAG-CBOR" target="https://ipld.io/specs/codecs/dag-cbor/spec/">
           <front>

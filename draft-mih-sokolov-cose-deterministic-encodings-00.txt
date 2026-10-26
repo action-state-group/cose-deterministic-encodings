@@ -582,9 +582,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    [I-D.ietf-cbor-serialization]
               Lundblade, L., "CBOR Serialization and Determinism", Work
               in Progress, Internet-Draft, draft-ietf-cbor-
-              serialization-09, 28 September 2026,
+              serialization-11, 23 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
-              serialization-09>.
+              serialization-11>.
 
    [RFC9393]  Birkholz, H., Fitzgerald-McKay, J., Schmidt, C., and D.
               Waltermire, "Concise Software Identification Tags",
