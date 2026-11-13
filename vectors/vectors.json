@@ -1,0 +1,378 @@
+{
+  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it.",
+  "header_label": 271,
+  "emit": [
+    {
+      "id": "emit-draft-example",
+      "description": "The draft's Examples section: {\"b\": 2, \"a\": 1} encodes to the 7-octet preimage and digest the draft states",
+      "value_cbor": "a2616202616101",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "a2616101616202",
+        "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-intro-key-order",
+      "description": "The draft's Introduction map {1000: 1, \"a\": 2}, given in length-first order, re-encodes in bytewise key order",
+      "value_cbor": "a26161021903e801",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "a21903e801616102",
+        "payload": "719e2b2869214afb47253271127de0876d602539965acbc8f132caff004d7a22",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-intro-float",
+      "description": "The draft's Introduction float 1.5, given as binary64, re-encodes in its shortest form",
+      "value_cbor": "fb3ff8000000000000",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "f93e00",
+        "payload": "b68bb45ecab0329ab815daf44f5a02d2a11a8ab87fbbdf4b08bcae00cada0324",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-indefinite",
+      "description": "Indefinite-length array and text string re-encode as definite-length",
+      "value_cbor": "9f7f61616162ff01ff",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "8262616201",
+        "payload": "2b351ba0da876d6a43bb1ebf7e8027593b491923b190a0af931d2ed608677593",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-non-preferred-int",
+      "description": "An integer in a longer head than needed re-encodes in its shortest head",
+      "value_cbor": "a118011a0000000a",
+      "content_type": "application/cbor",
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "a1010a",
+        "payload": "6600825539d79c07182a90af1fa0a17d8ccd4a9e7e0f4fe97f0f982b0f468207",
+        "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-nested",
+      "description": "Nested maps, arrays, negative integers, byte strings, simple values, floats and a tag",
+      "value_cbor": "a5636b657982203863617af61864c11a5f5e1000626262a26179f56178f44100fb40f86a0000000000",
+      "content_type": "application/swid+cbor",
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "a51864c11a5f5e10004100fa47c35000617af6626262a26178f46179f5636b657982203863",
+        "payload": "bdbc6aec3ecfcd921492b5d8028c46384eb3f69489c5cf4d62f3fad60740534c",
+        "protected": "a401261901022f190103756170706c69636174696f6e2f737769642b63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-sha384",
+      "description": "The draft example under SHA-384 (-43)",
+      "value_cbor": "a2616202616101",
+      "content_type": "application/cbor",
+      "hash_alg": -43,
+      "expected": {
+        "preimage": "a2616101616202",
+        "payload": "1d0de198c9f53b66f74cf5d7771e77f4a591852fcac0d2df7fc7595cfe98b69ff34ca9e052eef99ac43852100bb7783b",
+        "protected": "a40126190102382a190103706170706c69636174696f6e2f63626f7219010f01"
+      }
+    },
+    {
+      "id": "emit-content-format",
+      "description": "A Content-Format number (60, application/cbor) as the 259 value",
+      "value_cbor": "a2616202616101",
+      "content_type": 60,
+      "hash_alg": -16,
+      "expected": {
+        "preimage": "a2616101616202",
+        "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+        "protected": "a401261901022f190103183c19010f01"
+      }
+    }
+  ],
+  "verify": [
+    {
+      "id": "verify-preimage",
+      "description": "Holds the preimage; digest matches",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-value",
+      "description": "Holds only the structured value; re-creates the preimage with value 1",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-value-modified",
+      "description": "Holds a modified structured value",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616102",
+      "expected": {
+        "outcome": "failed",
+        "reason": "recreated-digest-mismatch"
+      }
+    },
+    {
+      "id": "verify-preimage-mismatch",
+      "description": "Holds a preimage that does not hash to the payload",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616203",
+      "expected": {
+        "outcome": "failed",
+        "reason": "preimage-digest-mismatch"
+      }
+    },
+    {
+      "id": "verify-value-no-encoding",
+      "description": "Holds only the value; the header does not identify the encoding",
+      "protected": "a301261901022f190103706170706c69636174696f6e2f63626f72",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "encoding-absent"
+      }
+    },
+    {
+      "id": "verify-preimage-no-encoding",
+      "description": "Holds the preimage; no encoding parameter (an RFC 9995 Hash Envelope)",
+      "protected": "a301261901022f190103706170706c69636174696f6e2f63626f72",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-value-unknown-encoding",
+      "description": "Holds only the value; the encoding value is one the verifier does not implement",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f1863",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "encoding-not-implemented"
+      }
+    },
+    {
+      "id": "verify-preimage-unknown-encoding",
+      "description": "Holds the preimage; an unknown encoding value does not prevent the RFC 9995 check",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f1863",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-nothing-held",
+      "description": "Holds neither the preimage nor the value",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "no-content"
+      }
+    },
+    {
+      "id": "verify-ctype-absent",
+      "description": "The encoding parameter without 259 fails before any recomputation, even with a matching preimage",
+      "protected": "a301261901022f19010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-absent"
+      }
+    },
+    {
+      "id": "verify-ctype-absent-value",
+      "description": "The encoding parameter without 259, holding the value",
+      "protected": "a301261901022f19010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-absent"
+      }
+    },
+    {
+      "id": "verify-ctype-json",
+      "description": "core-deterministic paired with application/json (the draft's own example of a violation)",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-mismatch"
+      }
+    },
+    {
+      "id": "verify-ctype-params-case",
+      "description": "A 259 media type with a parameter and in mixed case still matches",
+      "protected": "a401261901022f190103754170706c69636174696f6e2f43424f523b20783d7919010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-ctype-suffix",
+      "description": "A +cbor structured syntax suffix matches",
+      "protected": "a401261901022f190103756170706c69636174696f6e2f737769642b63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-ctype-suffix-sd-cwt",
+      "description": "A +sd-cwt structured syntax suffix matches",
+      "protected": "a401261901022f190103781a6170706c69636174696f6e2f6578616d706c652b73642d63777419010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-ctype-not-suffix",
+      "description": "A subtype that only begins with cbor is not a match",
+      "protected": "a401261901022f190103726170706c69636174696f6e2f63626f722d7819010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-mismatch"
+      }
+    },
+    {
+      "id": "verify-ctype-cf-cbor",
+      "description": "Content-Format 60 (application/cbor) matches",
+      "protected": "a401261901022f190103183c19010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-ctype-cf-json",
+      "description": "Content-Format 50 (application/json) does not match",
+      "protected": "a401261901022f190103183219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "failed",
+        "reason": "content-type-mismatch"
+      }
+    },
+    {
+      "id": "verify-ctype-unknown-encoding-json",
+      "description": "An encoding value the verifier does not recognize is not checked against 259",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f1863",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-binary64-held",
+      "description": "Holds a value whose float arrived as binary64; RFC 8949 Section 4.2.1 re-creates the shortest form the producer hashed",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "245066af3231e02b2ea53d2f7724b186111d01e64587af718492c0891a48796e",
+      "value_cbor": "a16178fb3ff8000000000000",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-binary64-hashed",
+      "description": "The producer hashed binary64 floats (another encoding) but claimed value 1",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
+      "value_cbor": "a16178fb3ff8000000000000",
+      "expected": {
+        "outcome": "failed",
+        "reason": "recreated-digest-mismatch"
+      }
+    },
+    {
+      "id": "verify-length-first-hashed",
+      "description": "The producer hashed length-first key order (RFC 8949 Section 4.2.3) but claimed value 1",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "daef156bfc07d5276566d45eaf893a8fef5999254f45be41336b01b688a3e65b",
+      "value_cbor": "a26161021903e801",
+      "expected": {
+        "outcome": "failed",
+        "reason": "recreated-digest-mismatch"
+      }
+    },
+    {
+      "id": "verify-length-first-preimage",
+      "description": "The same envelope, holding the length-first preimage itself: the RFC 9995 check passes",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "daef156bfc07d5276566d45eaf893a8fef5999254f45be41336b01b688a3e65b",
+      "preimage": "a26161021903e801",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-sha384",
+      "description": "SHA-384 (-43) as payload-hash-alg",
+      "protected": "a40126190102382a190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "1d0de198c9f53b66f74cf5d7771e77f4a591852fcac0d2df7fc7595cfe98b69ff34ca9e052eef99ac43852100bb7783b",
+      "value_cbor": "a2616202616101",
+      "expected": {
+        "outcome": "verified",
+        "reason": "recreated-digest-match"
+      }
+    },
+    {
+      "id": "verify-hash-alg-unknown",
+      "description": "A payload-hash-alg the verifier does not implement",
+      "protected": "a401261901023903e6190103706170706c69636174696f6e2f63626f7219010f01",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "hash-alg-not-implemented"
+      }
+    }
+  ]
+}

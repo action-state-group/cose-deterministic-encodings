@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Run the Python and Go reference code against the shared vectors, and check
+# that vectors/vectors.json is what vectors/generate.py produces.
+name: impl
+
+on:
+  push:
+    paths: ["lib/**", "vectors/**", "draft-*.md", ".github/workflows/impl.yml"]
+  pull_request:
+    paths: ["lib/**", "vectors/**", "draft-*.md", ".github/workflows/impl.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: vectors are current
+        run: python3 vectors/generate.py --check
+      - name: tests
+        run: python3 -m unittest discover -s lib/python -v
+
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.22" }
+      - name: vet and test
+        working-directory: lib/go
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test -v ./...
