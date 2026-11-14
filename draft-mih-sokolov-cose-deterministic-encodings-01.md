@@ -60,7 +60,8 @@ content type, and the preimage content type does not identify which one was
 applied. This document defines a COSE Hash Envelope protected-header
 parameter that identifies the encoding, and one value for CBOR content, the
 text string "dtrm", which states that the Core Deterministic Encoding
-Requirements of RFC 8949 were applied.
+Requirements of RFC 8949 and the NaN rule of draft-ietf-cbor-serialization
+were applied.
 
 --- note_Note_to_Readers
 

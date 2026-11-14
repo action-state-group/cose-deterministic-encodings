@@ -105,10 +105,10 @@ class NaN(unittest.TestCase):
                     c.emit(v, "application/cbor")
 
     def test_decided_from_the_bits_not_the_float(self):
-        # struct.unpack(">e", 7e01) gives the bits 7ff8000000000000: the payload
-        # is gone, and the float alone would look like the one NaN.
-        self.assertEqual(struct.pack(">d", struct.unpack(">e", bytes.fromhex("7e01"))[0]).hex(),
-                         "7ff8000000000000")
+        # What struct.unpack(">e", 7e01) returns depends on the Python version:
+        # before 3.14 the bits 7ff8000000000000, where the payload is gone and
+        # the float alone would look like the one NaN; from 3.14 the bits
+        # 7ff8040000000000.  The decoder does not depend on it.
         got = c.decode(bytes.fromhex("f97e01"))
         self.assertIsInstance(got, c.NonTrivialNaN)
         self.assertEqual(got.encoded.hex(), "f97e01")
