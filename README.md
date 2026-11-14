@@ -6,13 +6,13 @@ The COSE Hash Envelope (RFC 9995) carries the hash of content held elsewhere.
 When that content is structured, more than one deterministic serialization of it
 may be in use, and the Hash Envelope does not identify which one produced the
 hashed bytes — so a verifier cannot reliably recompute the hash. This draft
-defines a small IANA registry of deterministic encodings that any COSE usage can
-reference, and one Hash Envelope protected-header parameter
-(`deterministic-encodings`) as its first user, naming the deterministic
-encoding a producer applied before hashing a Hash Envelope payload. The registry
-is populated at issuance with `core-deterministic` (the Core Deterministic
-Encoding Requirements of RFC 8949 §4.2.1). It extends the Hash Envelope through
-its existing extension point and changes nothing in RFC 9995.
+defines one Hash Envelope protected-header parameter
+(`deterministic-encodings`), naming the deterministic encoding a producer
+applied before hashing a Hash Envelope payload, and one value for CBOR content:
+the text string `"dtrm"`, the identifier the CBOR working group defines for
+deterministic serialization, which states that the Core Deterministic Encoding
+Requirements of RFC 8949 §4.2.1 were applied. It extends the Hash Envelope
+through its existing extension point and changes nothing in RFC 9995.
 
 ## Status
 
@@ -46,7 +46,7 @@ make clean
 A minimal emitter and verifier for the `deterministic-encodings` header, in
 Python (`lib/python/`) and Go (`lib/go/`), each using only its standard
 library, and a shared set of vectors (`vectors/vectors.json`). The emitter
-encodes a structured value under `core-deterministic` (RFC 8949 §4.2.1),
+encodes a structured value under `"dtrm"` (RFC 8949 §4.2.1),
 hashes it, and builds the Hash Envelope protected header; the verifier
 reports a content binding as verified, failed, or unverified as the draft's
 "Producer and Verifier Behavior" section specifies. Signing is out of scope.

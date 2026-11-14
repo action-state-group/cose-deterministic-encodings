@@ -42,12 +42,6 @@ normative:
 informative:
   RFC9393:
   I-D.ietf-cbor-serialization:
-  DAG-CBOR:
-    title: "Specification: DAG-CBOR"
-    target: https://ipld.io/specs/codecs/dag-cbor/spec/
-    date: 2026
-    author:
-      - organization: IPLD
 
 --- abstract
 
@@ -58,9 +52,9 @@ hashed, the verifier has to encode the value again, and the digest matches
 only if it applies the same deterministic encoding as the producer. RFC 8949 describes more than one such encoding for the same
 content type, and the preimage content type does not identify which one was
 applied. This document defines a COSE Hash Envelope protected-header
-parameter that identifies the encoding, and an IANA registry of deterministic
-encodings whose initial entry is the Core Deterministic Encoding Requirements
-of RFC 8949.
+parameter that identifies the encoding, and one value for CBOR content, the
+text string "dtrm", which states that the Core Deterministic Encoding
+Requirements of RFC 8949 were applied.
 
 --- note_Note_to_Readers
 
@@ -118,8 +112,9 @@ guesses the encoding cannot tell a modified value from one encoded under a
 different rule.
 
 This document defines one protected-header parameter,
-deterministic-encodings, which identifies that encoding, and a small IANA
-registry of encoding identifiers. It uses the extension point the Hash
+deterministic-encodings, which identifies that encoding, and one value for
+CBOR content, the text string "dtrm", the identifier the CBOR working group
+defines for deterministic serialization ({{dtrm}}). It uses the extension point the Hash
 Envelope protected header already provides ({{Section 4 of RFC9995}}:
 `* (int / tstr) => any`). The encoding is not carried as a media-type
 parameter of preimage-content-type (259). The application/cbor media type defines no
@@ -188,9 +183,7 @@ Unverified:
 TBD\_1:
 : deterministic-encodings. The deterministic encoding with which a
   structured value was serialized to create the bytes that were hashed
-  (preimage) to produce the payload, given as the integer Value (not the
-  Name) assigned to an encoding in the COSE Deterministic Encodings registry
-  ({{iana-encodings}}).
+  (preimage) to produce the payload, given as a text string ({{dtrm}}).
 
 It extends {{RFC9995}} by adding one optional member to the
 Hash_Envelope_Protected_Header CDDL of {{RFC9995}} Section 4, alongside the
@@ -203,7 +196,7 @@ Hash_Envelope_Protected_Header_With_Encoding = {
     &(payload_hash_alg: 258) => int,
     ? &(payload_preimage_content_type: 259) => uint / tstr,
     ? &(payload_location: 260) => tstr,
-    ? &(deterministic_encodings: TBD_1) => int,
+    ? &(deterministic_encodings: TBD_1) => tstr,
     * (int / tstr) => any
 }
 ~~~
@@ -215,6 +208,19 @@ preimage-content-type (259) MUST also be present ({{consistency}}). A
 producer MUST NOT list label TBD\_1 in the crit header parameter
 ({{RFC9052}} Section 3.1), so that a verifier that implements only
 {{RFC9995}} can ignore it.
+
+## The Value "dtrm" {#dtrm}
+
+This document defines one value of deterministic-encodings, for CBOR
+content: the text string "dtrm". It states that the structured value was
+encoded under the Core Deterministic Encoding Requirements of {{RFC8949}}
+Section 4.2.1. The name "dtrm" is the one {{I-D.ietf-cbor-serialization}}
+(Section 8) gives to its deterministic serialization (Section 5), which is
+{{RFC8949}} Section 4.2.1 except for NaNs: "dtrm" excludes non-trivial NaNs,
+as the CBOR working group defines it ({{I-D.ietf-cbor-serialization}}
+Sections 4.1 and 5.1, and Appendix B.5). For a CBOR sequence {{RFC8742}}, each data item is
+encoded according to these requirements. The choices that {{RFC8949}}
+Section 4.2.2 leaves to a protocol are not part of "dtrm" ({{security}}).
 
 # Producer and Verifier Behavior {#behavior}
 
@@ -232,8 +238,11 @@ then be checked only from the preimage bytes.
 
 ## Consistency with preimage-content-type {#consistency}
 
-Each registered encoding lists the content types it applies to, as the
-Applicable Content Types of its registry entry ({{iana-encodings}}). When
+The Applicable Content Types of "dtrm" are application/cbor,
+application/cbor-seq, application/cose, application/cose-key,
+application/cose-key-set, application/cose-x509, application/cwt, and
+application/multipart-core, and media types with
+the +cbor, +cbor-seq, +cose, +cwt, or +sd-cwt structured syntax suffix. When
 deterministic-encodings is present, preimage-content-type (259) MUST also
 be present, and its value MUST match one of the Applicable Content Types of
 the encoding that deterministic-encodings identifies:
@@ -248,7 +257,7 @@ the encoding that deterministic-encodings identifies:
   a matching media type with no content coding.
 
 A producer MUST NOT emit a Hash Envelope that violates these rules -- for
-example, one pairing core-deterministic with application/json. A verifier
+example, one pairing "dtrm" with application/json. A verifier
 that finds deterministic-encodings present with preimage-content-type
 (259) absent, or with a 259 value that does not match the Applicable Content
 Types of an encoding the verifier recognizes, MUST report the content
@@ -302,7 +311,7 @@ key order, placing "a" before "b"), gives the 7-octet preimage
     / alg                     / 1: -7, # ES256
     / hash algorithm          / 258: -16, # sha-256
     / preimage type           / 259: "application/cbor",
-    / deterministic encodings / TBD_1: 1, # core-deterministic
+    / deterministic encodings / TBD_1: "dtrm",
   }>>
   / unprotected / {},
   / payload     / h'a0d3af9e...c893b5e3', # digest above
@@ -315,8 +324,8 @@ Identification (CoSWID) tags but does not require a deterministic encoding of
 them, so two producers may serialize the same tag as different byte
 sequences. A producer that applies the Core Deterministic Encoding
 Requirements before hashing a CoSWID tag sets preimage-content-type (259) to
-application/swid+cbor and deterministic-encodings to core-deterministic
-(Value 1) -- recording its own choice, not a CoSWID requirement -- so that a
+application/swid+cbor and deterministic-encodings to "dtrm" -- recording
+its own choice, not a CoSWID requirement -- so that a
 verifier holding the decoded tag knows how to re-create the preimage.
 
 # Security Considerations {#security}
@@ -334,7 +343,7 @@ tag. Choices that decide which data item represents a value, such as those
 versus floating-point values, belong to the structured value, not to
 the encoding that deterministic-encodings identifies. A choice that changes only how the same
 data item is serialized, such as encoding every floating-point value as binary64, is a different
-encoding and needs its own value. A producer that re-reads stored content before hashing
+encoding, not "dtrm". A producer that re-reads stored content before hashing
 MUST ensure the preimage it hashes is byte-identical to the encoding's own
 output. A verifier that re-creates a preimage from a structured value
 ({{verification}}) needs that value exactly as the producer encoded it;
@@ -361,59 +370,11 @@ governs that range:
 
 | Name | Label | Value Type | Value Registry | Description | Reference |
 | --- | --- | --- | --- | --- | --- |
-| deterministic-encodings | TBD\_1 | int | COSE Deterministic Encodings ({{iana-encodings}}) | Deterministic encoding applied to create the preimage of a Hash Envelope payload | This document |
+| deterministic-encodings | TBD\_1 | tstr | none | Deterministic encoding applied to create the preimage of a Hash Envelope payload | This document |
 
 The suggested value for TBD\_1 is 271, the lowest unassigned value in the
 "Integer values from 256 to 65535" range of the COSE Header Parameters
 registry as of 2026-10-18.
-
-## COSE Deterministic Encodings Registry {#iana-encodings}
-
-IANA is requested to create a new registry, "COSE Deterministic Encodings".
-The registry identifies deterministic encodings of structured content; it
-carries no Hash Envelope semantics of its own, and a value is meaningful only
-through a parameter, such as deterministic-encodings ({{header-param}}),
-that gives it a role. The registry is not specific to one data model or
-content type: an entry applies wherever preimage-content-type (259) matches
-its Applicable Content Types ({{consistency}}), and encodings for other
-structured content types can be registered under the policy below.
-
-A registry is used, rather than a fixed reference, for the reasons in
-{{intro}}. A profile that has its own media type, such as
-application/vnd.ipld.dag-cbor {{DAG-CBOR}}, is already identified by 259; content labelled
-application/cbor, or with an application's own type such as
-application/swid+cbor, is not. Rules that only restrict which data items may
-occur produce Section 4.2.1 output and use value 1; this includes the
-deterministic serialization of {{I-D.ietf-cbor-serialization}}, which only
-excludes non-trivial NaNs (Appendix B.5 of that document).
-
-Registration policy: Specification Required ({{RFC8126}} Section 4.6). The
-registration template is: Value (an unsigned integer), Name, Description,
-Applicable Content Types (media types and structured syntax suffixes, matched
-against 259 as {{consistency}} specifies), Reference, and Change Controller.
-The designated expert checks that the referenced specification defines
-exactly one deterministic encoding for the value, together with any
-constraints on the structured values it accepts, and that its Applicable
-Content Types are correct and can be matched as {{consistency}} specifies.
-Entries are immutable: the registry grows by adding values, never by
-reinterpreting an existing one. An entry MAY be withdrawn through the same
-procedure; a withdrawn value and its name are never reassigned.
-
-Initial contents:
-
-| Value | Name | Description | Reference | Change Controller |
-| --- | --- | --- | --- | --- |
-| 1 | core-deterministic | Core Deterministic Encoding Requirements | {{RFC8949}} Section 4.2.1 | IETF |
-
-The Applicable Content Types of value 1 are application/cbor,
-application/cbor-seq, application/cose, application/cose-key,
-application/cose-key-set, application/cose-x509, application/cwt, and
-application/multipart-core, and media types with
-the +cbor, +cbor-seq, +cose, +cwt, or +sd-cwt structured syntax suffix.
-For a CBOR sequence {{RFC8742}}, each data item is encoded according
-to these requirements. Value 1 is exactly {{RFC8949}} Section 4.2.1; the
-choices that Section 4.2.2 leaves to a protocol are not part of it
-({{security}}).
 
 --- back
 
