@@ -102,10 +102,11 @@ class NonTrivialNaN:
     """A decoded NaN other than the one "dtrm" emits: a signaling NaN, a NaN
     with a non-zero payload, or a NaN with the sign bit set.
 
-    The decoder decides this from the encoded bits, because a Python float
-    cannot carry the distinction: struct.unpack(">e", bytes.fromhex("7e01"))
-    gives the bits 7ff8000000000000, and the payload is gone.  ``encoded``
-    holds the data item as received (initial byte and argument).
+    The decoder decides this from the encoded bits, because the float that
+    struct returns may have lost the distinction, depending on the Python
+    version: before 3.14, struct.unpack(">e", bytes.fromhex("7e01")) gives
+    the bits 7ff8000000000000, and the payload is gone.  ``encoded`` holds
+    the data item as received (initial byte and argument).
     """
     encoded: bytes
 
