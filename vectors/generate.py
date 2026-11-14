@@ -196,6 +196,11 @@ def build() -> dict:
                     "integer 1 an -00 producer writes, which is not \"dtrm\"",
                     header(alg=-7, hash=-16, ctype="application/cbor", enc=1), ex_dig,
                     "unverified", "encoding-not-implemented", value_cbor=ex_value),
+        verify_case("verify-value-nan-payload", "Holds only a value whose NaN has a non-zero "
+                    "payload (0xf97e01), which \"dtrm\" cannot encode; the payload is the digest "
+                    "of the same map with 0xf97e00, and the verifier does not replace the NaN",
+                    ok, sha256(h("a1 61 78 f9 7e 00")),
+                    "unverified", "value-not-encodable", value_cbor=h("a1 61 78 f9 7e 01")),
         verify_case("verify-preimage-unknown-encoding", "Holds the preimage; an unknown encoding "
                     "value does not prevent the RFC 9995 check",
                     header(alg=-7, hash=-16, ctype="application/cbor", enc=99), ex_dig,

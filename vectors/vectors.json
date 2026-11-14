@@ -255,6 +255,17 @@
       }
     },
     {
+      "id": "verify-value-nan-payload",
+      "description": "Holds only a value whose NaN has a non-zero payload (0xf97e01), which \"dtrm\" cannot encode; the payload is the digest of the same map with 0xf97e00, and the verifier does not replace the NaN",
+      "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f646474726d",
+      "payload": "b4c7e97b7fdae5bfcdad4c1c4008c1564ef4390303506e3979ced92ab47c8b76",
+      "value_cbor": "a16178f97e01",
+      "expected": {
+        "outcome": "unverified",
+        "reason": "value-not-encodable"
+      }
+    },
+    {
       "id": "verify-preimage-unknown-encoding",
       "description": "Holds the preimage; an unknown encoding value does not prevent the RFC 9995 check",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f1863",

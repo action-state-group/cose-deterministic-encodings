@@ -204,8 +204,9 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
       case if it holds neither the preimage nor a structured value; if
       it holds a structured value but not the preimage, and
       deterministic-encodings is absent or carries a value the verifier
-      does not recognize or implement (Section 4.3); or if it does not
-      implement the hash algorithm identified by payload-hash-alg (258).
+      does not recognize or implement, or the identified encoding cannot
+      encode that value (Section 4.3); or if it does not implement the
+      hash algorithm identified by payload-hash-alg (258).
 
 3.  The deterministic-encodings Header Parameter
 
@@ -214,10 +215,9 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
       were hashed (preimage) to produce the payload, given as a text
       string (Section 3.1).
 
-   It extends [RFC9995] by adding one optional member to the
-   Hash_Envelope_Protected_Header CDDL of [RFC9995] Section 4, alongside
-   the members for labels 258-260.  The extended rule restates the
-   [RFC9995] rule with that member added:
+
+
+
 
 
 
@@ -225,6 +225,11 @@ Mih & Sokolov              Expires 19 May 2027                  [Page 4]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
+
+   It extends [RFC9995] by adding one optional member to the
+   Hash_Envelope_Protected_Header CDDL of [RFC9995] Section 4, alongside
+   the members for labels 258-260.  The extended rule restates the
+   [RFC9995] rule with that member added:
 
    Hash_Envelope_Protected_Header_With_Encoding = {
        ? &(alg: 1) => int,
@@ -269,11 +274,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    encoding actually applied.  A producer that serializes a structured
    value without a deterministic encoding, or whose preimage is not the
    serialization of a structured value -- for example application/octet-
-   stream content, an image, or an archive -- has no encoding to
-   identify, and the parameter is absent; the content binding can then
-   be checked only from the preimage bytes.
-
-
 
 
 
@@ -281,6 +281,10 @@ Mih & Sokolov              Expires 19 May 2027                  [Page 5]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
+
+   stream content, an image, or an archive -- has no encoding to
+   identify, and the parameter is absent; the content binding can then
+   be checked only from the preimage bytes.
 
 4.2.  Consistency with preimage-content-type
 
@@ -325,11 +329,7 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    information, and applies whether or not deterministic-encodings is
    present, subject to Section 4.2.
 
-   A verifier that holds only a structured value -- for example, content
-   it received, stored, or decoded in a form other than the preimage
-   itself -- has to re-create the preimage by encoding that value, and
-   needs deterministic-encodings to do so.  Such a verifier MUST encode
-   the value with the encoding that deterministic-encodings identifies,
+
 
 
 
@@ -338,12 +338,20 @@ Mih & Sokolov              Expires 19 May 2027                  [Page 6]
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
+   A verifier that holds only a structured value -- for example, content
+   it received, stored, or decoded in a form other than the preimage
+   itself -- has to re-create the preimage by encoding that value, and
+   needs deterministic-encodings to do so.  Such a verifier MUST encode
+   the value with the encoding that deterministic-encodings identifies,
    and MUST NOT infer the encoding from preimage-content-type (259) or
    from the structure of the value.  If deterministic-encodings is
    absent, or carries a value the verifier does not recognize or
    implement, the verifier cannot re-create the preimage: it MUST NOT
    report the content binding as verified, and MUST report it as
-   unverified rather than as failed.
+   unverified rather than as failed.  The same applies when the
+   identified encoding cannot encode the structured value -- for
+   example, a value that holds a NaN that "dtrm" excludes (Section 3.1);
+   the verifier MUST NOT change the value to make it encodable.
 
    A Hash Envelope produced without this parameter -- including any
    produced before the parameter was registered -- is not defective: its
@@ -376,6 +384,16 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
      / signature   / h'...'  # 64 octets, r || s
    ])
 
+
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                  [Page 7]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
    [RFC9393] registers application/swid+cbor for Concise Software
    Identification (CoSWID) tags but does not require a deterministic
    encoding of them, so two producers may serialize the same tag as
@@ -385,14 +403,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    deterministic-encodings to "dtrm" -- recording its own choice, not a
    CoSWID requirement -- so that a verifier holding the decoded tag
    knows how to re-create the preimage.
-
-
-
-
-Mih & Sokolov              Expires 19 May 2027                  [Page 7]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
 
 6.  Security Considerations
 
@@ -429,16 +439,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 
 8.  IANA Considerations
 
-8.1.  COSE Header Parameters
-
-   IANA is requested to register the following entry in the "COSE Header
-   Parameters" registry, in the "Integer values from 256 to 65535"
-   range, under the Specification Required policy ([RFC8126]
-   Section 4.6) that governs that range:
-
-
-
-
 
 
 
@@ -449,6 +449,13 @@ Mih & Sokolov              Expires 19 May 2027                  [Page 8]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
+
+8.1.  COSE Header Parameters
+
+   IANA is requested to register the following entry in the "COSE Header
+   Parameters" registry, in the "Integer values from 256 to 65535"
+   range, under the Specification Required policy ([RFC8126]
+   Section 4.6) that governs that range:
 
     +================+=====+=====+========+===============+===========+
     | Name           |Label|Value|Value   | Description   | Reference |
@@ -488,14 +495,7 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
               DOI 10.17487/RFC7252, June 2014,
               <https://www.rfc-editor.org/rfc/rfc7252>.
 
-   [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
-              Writing an IANA Considerations Section in RFCs", BCP 26,
-              RFC 8126, DOI 10.17487/RFC8126, June 2017,
-              <https://www.rfc-editor.org/rfc/rfc8126>.
 
-   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
-              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
-              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
 
 
@@ -505,6 +505,15 @@ Mih & Sokolov              Expires 19 May 2027                  [Page 9]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
+
+   [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
+              Writing an IANA Considerations Section in RFCs", BCP 26,
+              RFC 8126, DOI 10.17487/RFC8126, June 2017,
+              <https://www.rfc-editor.org/rfc/rfc8126>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
    [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
               Definition Language (CDDL): A Notational Convention to
@@ -543,6 +552,16 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
               <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
               serialization-12>.
 
+
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                 [Page 10]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
    [RFC9393]  Birkholz, H., Fitzgerald-McKay, J., Schmidt, C., and D.
               Waltermire, "Concise Software Identification Tags",
               RFC 9393, DOI 10.17487/RFC9393, June 2023,
@@ -555,13 +574,6 @@ Acknowledgments
    [RFC9995] and proposed the name core-deterministic, and Henk Birkholz
    for a review of its scope, motivation, and terminology.
 
-
-
-Mih & Sokolov              Expires 19 May 2027                 [Page 10]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
 Authors' Addresses
 
    Steven Mih
@@ -572,18 +584,6 @@ Authors' Addresses
    Anton Sokolov
    Tyche Institute
    Email: anton.sokolov@tyche.institute
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
