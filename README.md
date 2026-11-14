@@ -61,4 +61,4 @@ python3 -m unittest discover -s lib/python
 ```
 
 Current draft:
-[`draft-mih-sokolov-cose-deterministic-encodings-00`](draft-mih-sokolov-cose-deterministic-encodings-00.md).
+[`draft-mih-sokolov-cose-deterministic-encodings-01`](draft-mih-sokolov-cose-deterministic-encodings-01.md).

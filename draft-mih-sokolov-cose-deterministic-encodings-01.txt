@@ -5,12 +5,12 @@
 COSE                                                              S. Mih
 Internet-Draft                                  Action State Group, Inc.
 Intended status: Standards Track                              A. Sokolov
-Expires: 30 April 2027                                   Tyche Institute
-                                                         27 October 2026
+Expires: 19 May 2027                                     Tyche Institute
+                                                        15 November 2026
 
 
                     Deterministic Encodings for COSE
-           draft-mih-sokolov-cose-deterministic-encodings-00
+           draft-mih-sokolov-cose-deterministic-encodings-01
 
 Abstract
 
@@ -53,12 +53,12 @@ Status of This Memo
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 1]
+Mih & Sokolov              Expires 19 May 2027                  [Page 1]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
-   This Internet-Draft will expire on 30 April 2027.
+   This Internet-Draft will expire on 19 May 2027.
 
 Copyright Notice
 
@@ -109,9 +109,9 @@ Copyright Notice
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 2]
+Mih & Sokolov              Expires 19 May 2027                  [Page 2]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    rather than transmit, by fixing how that structure is encoded
@@ -165,9 +165,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 3]
+Mih & Sokolov              Expires 19 May 2027                  [Page 3]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    "COSE", "COSE_Sign1", and "protected header" are defined in
@@ -221,9 +221,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 4]
+Mih & Sokolov              Expires 19 May 2027                  [Page 4]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    It extends [RFC9995] by adding one optional member to the
@@ -277,9 +277,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 5]
+Mih & Sokolov              Expires 19 May 2027                  [Page 5]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    *  A 259 value that is a media-type name matches when its type and
@@ -333,9 +333,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 6]
+Mih & Sokolov              Expires 19 May 2027                  [Page 6]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    A Hash Envelope produced without this parameter -- including any
@@ -389,9 +389,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 7]
+Mih & Sokolov              Expires 19 May 2027                  [Page 7]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    A deterministic encoding fixes the preimage for a given structured
@@ -445,9 +445,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 8]
+Mih & Sokolov              Expires 19 May 2027                  [Page 8]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    +================+=====+=====+=============+=============+=========+
@@ -501,9 +501,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 9]
+Mih & Sokolov              Expires 19 May 2027                  [Page 9]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    structured values it accepts, and that its Applicable Content Types
@@ -557,9 +557,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                [Page 10]
+Mih & Sokolov              Expires 19 May 2027                 [Page 10]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
@@ -613,17 +613,17 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-Mih & Sokolov             Expires 30 April 2027                [Page 11]
+Mih & Sokolov              Expires 19 May 2027                 [Page 11]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    [I-D.ietf-cbor-serialization]
               Lundblade, L., "CBOR Serialization and Determinism", Work
               in Progress, Internet-Draft, draft-ietf-cbor-
-              serialization-11, 23 October 2026,
+              serialization-12, 30 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
-              serialization-11>.
+              serialization-12>.
 
    [RFC9393]  Birkholz, H., Fitzgerald-McKay, J., Schmidt, C., and D.
               Waltermire, "Concise Software Identification Tags",
@@ -669,4 +669,4 @@ Authors' Addresses
 
 
 
-Mih & Sokolov             Expires 30 April 2027                [Page 12]
+Mih & Sokolov              Expires 19 May 2027                 [Page 12]

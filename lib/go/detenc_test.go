@@ -120,7 +120,7 @@ func TestVerifyVectors(t *testing.T) {
 
 // The draft's example digest, read from the draft text.
 func TestDraftExample(t *testing.T) {
-	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-00.md")
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-01.md")
 	if err != nil {
 		t.Fatal(err)
 	}

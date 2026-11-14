@@ -1,8 +1,8 @@
 ---
 title: "Deterministic Encodings for COSE"
 abbrev: "COSE Deterministic Encodings"
-docname: draft-mih-sokolov-cose-deterministic-encodings-00
-date: 2026-10-27
+docname: draft-mih-sokolov-cose-deterministic-encodings-01
+date: 2026-11-15
 category: std
 submissiontype: IETF
 ipr: trust200902
