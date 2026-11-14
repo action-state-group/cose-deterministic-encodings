@@ -42,6 +42,12 @@ normative:
 informative:
   RFC9393:
   I-D.ietf-cbor-serialization:
+  DAG-CBOR:
+    title: "Specification: DAG-CBOR"
+    target: https://ipld.io/specs/codecs/dag-cbor/spec/
+    date: 2026
+    author:
+      - organization: IPLD
 
 --- abstract
 
@@ -122,7 +128,10 @@ parameters ({{RFC8949}} Section 9.3), so such a parameter would have to be
 registered for every media type the encoding applies to, and a CoAP
 Content-Format number carries only the parameters fixed in its registry
 entry ({{RFC7252}} Section 12.3), so each pairing of media type and encoding
-would also need its own number.
+would also need its own number. A profile that has its own media type, such
+as application/vnd.ipld.dag-cbor {{DAG-CBOR}}, is already identified by 259;
+content labelled application/cbor, or with an application's own type such as
+application/swid+cbor, is not.
 
 The scope of this document is structured values, such as CBOR data items,
 and the deterministic encodings that serialize them. Media encodings, such
@@ -219,8 +228,9 @@ Section 4.2.1. The name "dtrm" is the one {{I-D.ietf-cbor-serialization}}
 {{RFC8949}} Section 4.2.1 except for NaNs: "dtrm" excludes non-trivial NaNs,
 as the CBOR working group defines it (Sections 4.1 and 5.1, and
 Appendix B.5, of {{I-D.ietf-cbor-serialization}}). For a CBOR sequence {{RFC8742}}, each data item is
-encoded according to these requirements. The choices that {{RFC8949}}
-Section 4.2.2 leaves to a protocol are not part of "dtrm" ({{security}}).
+encoded according to these requirements. Apart from that rule for NaNs, the
+choices that {{RFC8949}} Section 4.2.2 leaves to a protocol are not part of
+"dtrm" ({{security}}).
 
 # Producer and Verifier Behavior {#behavior}
 

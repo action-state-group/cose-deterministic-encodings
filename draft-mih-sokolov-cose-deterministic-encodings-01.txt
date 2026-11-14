@@ -141,7 +141,10 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    be registered for every media type the encoding applies to, and a
    CoAP Content-Format number carries only the parameters fixed in its
    registry entry ([RFC7252] Section 12.3), so each pairing of media
-   type and encoding would also need its own number.
+   type and encoding would also need its own number.  A profile that has
+   its own media type, such as application/vnd.ipld.dag-cbor [DAG-CBOR],
+   is already identified by 259; content labelled application/cbor, or
+   with an application's own type such as application/swid+cbor, is not.
 
    The scope of this document is structured values, such as CBOR data
    items, and the deterministic encodings that serialize them.  Media
@@ -156,9 +159,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    "OPTIONAL" in this document are to be interpreted as described in BCP
    14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
-
-
-
 
 
 
@@ -254,9 +254,9 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    for NaNs: "dtrm" excludes non-trivial NaNs, as the CBOR working group
    defines it (Sections 4.1 and 5.1, and Appendix B.5, of
    [I-D.ietf-cbor-serialization]).  For a CBOR sequence [RFC8742], each
-   data item is encoded according to these requirements.  The choices
-   that [RFC8949] Section 4.2.2 leaves to a protocol are not part of
-   "dtrm" (Section 6).
+   data item is encoded according to these requirements.  Apart from
+   that rule for NaNs, the choices that [RFC8949] Section 4.2.2 leaves
+   to a protocol are not part of "dtrm" (Section 6).
 
 4.  Producer and Verifier Behavior
 
@@ -533,6 +533,9 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 
 9.2.  Informative References
 
+   [DAG-CBOR] IPLD, "Specification: DAG-CBOR", 2026,
+              <https://ipld.io/specs/codecs/dag-cbor/spec/>.
+
    [I-D.ietf-cbor-serialization]
               Lundblade, L., "CBOR Serialization and Determinism", Work
               in Progress, Internet-Draft, draft-ietf-cbor-
@@ -552,15 +555,14 @@ Acknowledgments
    [RFC9995] and proposed the name core-deterministic, and Henk Birkholz
    for a review of its scope, motivation, and terminology.
 
-Authors' Addresses
-
-
 
 
 Mih & Sokolov              Expires 19 May 2027                 [Page 10]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
+
+Authors' Addresses
 
    Steven Mih
    Action State Group, Inc.
@@ -570,8 +572,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    Anton Sokolov
    Tyche Institute
    Email: anton.sokolov@tyche.institute
-
-
 
 
 
