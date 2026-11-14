@@ -567,6 +567,32 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
               RFC 9393, DOI 10.17487/RFC9393, June 2023,
               <https://www.rfc-editor.org/rfc/rfc9393>.
 
+Appendix A.  Changes from Version 00
+
+   This section is to be removed before publishing as an RFC.
+
+   *  The "COSE Deterministic Encodings" registry is removed.  This
+      document requests only the registration of the header parameter
+      (Section 8).
+
+   *  The value of deterministic-encodings is the text string "dtrm"
+      (Section 3.1), the name [I-D.ietf-cbor-serialization] gives to its
+      deterministic serialization.  Version 00 used the integer 1, the
+      value its registry assigned to core-deterministic.  A verifier of
+      this version handles the integer 1 as a value it does not
+      recognize (Section 4.3).
+
+   *  "dtrm" excludes non-trivial NaNs, as [I-D.ietf-cbor-serialization]
+      defines.  In version 00, value 1 was [RFC8949] Section 4.2.1
+      without that exclusion.
+
+   *  The Applicable Content Types, which version 00 put in the registry
+      entry, are listed in Section 4.2.
+
+   *  A verifier that cannot produce the identified encoding of a
+      structured value reports the content binding as unverified
+      (Section 4.3).
+
 Acknowledgments
 
    The authors thank Amaury Chamayou for a detailed review that aligned
@@ -584,32 +610,6 @@ Authors' Addresses
    Anton Sokolov
    Tyche Institute
    Email: anton.sokolov@tyche.institute
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

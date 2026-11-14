@@ -391,6 +391,29 @@ registry as of 2026-10-18.
 
 --- back
 
+# Changes from Version 00
+{:removeinrfc}
+
+* The "COSE Deterministic Encodings" registry is removed. This document
+  requests only the registration of the header parameter ({{iana}}).
+
+* The value of deterministic-encodings is the text string "dtrm"
+  ({{dtrm}}), the name {{I-D.ietf-cbor-serialization}} gives to its
+  deterministic serialization. Version 00 used the integer 1, the value its
+  registry assigned to core-deterministic. A verifier of this version
+  handles the integer 1 as a value it does not recognize
+  ({{verification}}).
+
+* "dtrm" excludes non-trivial NaNs, as {{I-D.ietf-cbor-serialization}}
+  defines. In version 00, value 1 was {{RFC8949}} Section 4.2.1 without
+  that exclusion.
+
+* The Applicable Content Types, which version 00 put in the registry
+  entry, are listed in {{consistency}}.
+
+* A verifier that cannot produce the identified encoding of a structured
+  value reports the content binding as unverified ({{verification}}).
+
 # Acknowledgments
 {:numbered="false"}
 
