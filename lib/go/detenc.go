@@ -37,8 +37,10 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is value 1 of the COSE Deterministic Encodings registry.
-const CoreDeterministic = 1
+// CoreDeterministic is the one value the draft defines, the text string
+// "dtrm": RFC 8949 Section 4.2.1, as the deterministic serialization of
+// draft-ietf-cbor-serialization.
+const CoreDeterministic = "dtrm"
 
 // Content-binding outcomes.
 const (
@@ -48,7 +50,8 @@ const (
 )
 
 // The structured value model. A decoded data item is one of: Int, []byte,
-// string, []any (array), Map, Tag, bool, nil (null), float64, Simple.
+// string, []any (array), Map, Tag, bool, nil (null), float64, Simple,
+// NonTrivialNaN.
 
 // Int is a CBOR integer: N if !Neg, otherwise -1-N.
 type Int struct {
@@ -91,6 +94,20 @@ type Tag struct {
 
 // Simple is a simple value other than false, true and null.
 type Simple uint8
+
+// NonTrivialNaN is a decoded NaN other than the one "dtrm" emits: a
+// signaling NaN, a NaN with a non-zero payload, or a NaN with the sign bit
+// set. It holds the data item as received (initial byte and argument).
+//
+// The decoder decides this from the encoded bits, because a float64 cannot
+// be trusted to carry the distinction: fromHalf returns math.NaN() for every
+// NaN half, and the bits of math.NaN() are 0x7FF8000000000001.
+type NonTrivialNaN []byte
+
+// qNaNBits64 is the one NaN "dtrm" emits, 0xf97e00, as binary64 bits: sign
+// bit clear, most significant significand bit set, all remaining
+// significand bits clear (draft-ietf-cbor-serialization Section 4.1).
+const qNaNBits64 = 0x7ff8000000000000
 
 var (
 	ErrEncode = errors.New("detenc: cannot encode")
@@ -170,7 +187,14 @@ func fromHalf(h uint16) float64 {
 
 func encodeFloat(buf *bytes.Buffer, f float64) error {
 	if math.IsNaN(f) {
-		return fmt.Errorf("%w: NaN is outside what this reference encodes", ErrEncode)
+		// "dtrm" emits one NaN, 0xf97e00, and this reference rejects every
+		// other NaN rather than change the value it hashes. Decided by bit
+		// pattern: math.NaN() itself has a payload bit set and is rejected.
+		if math.Float64bits(f) == qNaNBits64 {
+			buf.Write([]byte{0xf9, 0x7e, 0x00})
+			return nil
+		}
+		return fmt.Errorf("%w: non-trivial NaN: \"dtrm\" emits only 0xf97e00", ErrEncode)
 	}
 	if h, ok := toHalf(f); ok {
 		buf.WriteByte(0xf9)
@@ -255,6 +279,8 @@ func encode(buf *bytes.Buffer, v any) error {
 	case Tag:
 		head(buf, 6, x.Number)
 		return encode(buf, x.Value)
+	case NonTrivialNaN:
+		return fmt.Errorf("%w: non-trivial NaN: \"dtrm\" emits only 0xf97e00", ErrEncode)
 	case Simple:
 		if x >= 24 && x <= 31 {
 			return fmt.Errorf("%w: reserved simple value", ErrEncode)
@@ -269,7 +295,10 @@ func encode(buf *bytes.Buffer, v any) error {
 // --- A small CBOR decoder --------------------------------------------------
 
 // Decode decodes exactly one well-formed CBOR data item. Integers and floats
-// stay distinct, maps decode to Map, and duplicate map keys are rejected.
+// stay distinct, maps decode to Map, and duplicate map keys are rejected. A
+// NaN decodes, by its encoded bits, to the float64 with bits
+// 0x7ff8000000000000 when it is the one NaN "dtrm" emits, and to
+// NonTrivialNaN otherwise.
 func Decode(data []byte) (any, error) {
 	v, n, err := decode(data, 0)
 	if err != nil {
@@ -300,6 +329,25 @@ func decode(data []byte, pos int) (any, int, error) {
 		raw, err := take(data, pos, n)
 		if err != nil {
 			return nil, 0, err
+		}
+		// A NaN: decide from the bits, before any conversion to float64.
+		var bits, expMask, mantMask, trivial uint64
+		for _, c := range raw {
+			bits = bits<<8 | uint64(c)
+		}
+		switch ai {
+		case 25:
+			expMask, mantMask, trivial = 0x7c00, 0x03ff, 0x7e00
+		case 26:
+			expMask, mantMask, trivial = 0x7f800000, 0x007fffff, 0x7fc00000
+		default:
+			expMask, mantMask, trivial = 0x7ff0000000000000, 0x000fffffffffffff, qNaNBits64
+		}
+		if bits&expMask == expMask && bits&mantMask != 0 {
+			if bits == trivial {
+				return math.Float64frombits(qNaNBits64), pos + n, nil
+			}
+			return NonTrivialNaN(append([]byte{b[0]}, raw...)), pos + n, nil
 		}
 		switch ai {
 		case 25:
@@ -502,7 +550,7 @@ var ContentFormats = map[uint64]string{
 
 // ContentTypeMatches reports whether a 259 value matches the Applicable
 // Content Types of the encoding.
-func ContentTypeMatches(encoding int64, contentType any) bool {
+func ContentTypeMatches(encoding string, contentType any) bool {
 	if encoding != CoreDeterministic {
 		return false
 	}
@@ -560,7 +608,7 @@ type Emitted struct {
 	Preimage, Payload, Protected []byte
 }
 
-// Emit encodes value with core-deterministic, hashes it with hashAlg, and
+// Emit encodes value with "dtrm", hashes it with hashAlg, and
 // builds the serialized protected header (alg, 258, 259 and label).
 func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted, error) {
 	if hasher(hashAlg) == nil {
@@ -578,7 +626,7 @@ func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted
 		{I(LabelAlg), I(alg)},
 		{I(LabelPayloadHashAlg), I(hashAlg)},
 		{I(LabelPreimageContentType), contentType},
-		{I(label), I(CoreDeterministic)},
+		{I(label), CoreDeterministic},
 	})
 	if err != nil {
 		return nil, err
@@ -623,8 +671,10 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	}
 	encRaw, hasEncoding := header.Get(label)
 	ctype, hasCtype := header.Get(LabelPreimageContentType)
-	enc, isInt := smallInt(encRaw)
-	recognized := hasEncoding && isInt && enc == CoreDeterministic
+	// Only the text string "dtrm" is recognized; any other value, including
+	// the integer 1 an -00 producer writes, is not.
+	enc, isText := encRaw.(string)
+	recognized := hasEncoding && isText && enc == CoreDeterministic
 
 	// Consistency with preimage-content-type: this check comes first.
 	if hasEncoding {

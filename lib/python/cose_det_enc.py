@@ -30,7 +30,9 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-CORE_DETERMINISTIC = 1
+# The one value the draft defines: RFC 8949 Section 4.2.1, as the
+# deterministic serialization ("dtrm") of draft-ietf-cbor-serialization.
+CORE_DETERMINISTIC = "dtrm"
 
 VERIFIED = "verified"
 FAILED = "failed"
@@ -43,7 +45,7 @@ HASH_ALGS = {
     -44: "sha512",
 }
 
-# Applicable Content Types of value 1 (the draft's COSE Deterministic Encodings registry).
+# Applicable Content Types of "dtrm" (the draft's consistency section).
 CORE_DETERMINISTIC_MEDIA_TYPES = frozenset({
     "application/cbor",
     "application/cbor-seq",
@@ -95,6 +97,29 @@ class Simple:
     value: int
 
 
+@dataclass(frozen=True)
+class NonTrivialNaN:
+    """A decoded NaN other than the one "dtrm" emits: a signaling NaN, a NaN
+    with a non-zero payload, or a NaN with the sign bit set.
+
+    The decoder decides this from the encoded bits, because a Python float
+    cannot carry the distinction: struct.unpack(">e", bytes.fromhex("7e01"))
+    gives the bits 7ff8000000000000, and the payload is gone.  ``encoded``
+    holds the data item as received (initial byte and argument).
+    """
+    encoded: bytes
+
+
+# The one NaN "dtrm" emits, 0xf97e00 (draft-ietf-cbor-serialization Section
+# 4.1): sign bit clear, most significant significand bit set, all remaining
+# significand bits clear.  As binary64 and as binary32 its bits are these.
+_QNAN_BITS64 = 0x7FF8000000000000
+_QNAN = struct.unpack(">d", _QNAN_BITS64.to_bytes(8, "big"))[0]
+_TRIVIAL_NAN_BITS = {25: 0x7E00, 26: 0x7FC00000, 27: _QNAN_BITS64}
+_FLOAT_EXP_MANT = {25: (0x7C00, 0x03FF), 26: (0x7F800000, 0x007FFFFF),
+                   27: (0x7FF0000000000000, 0x000FFFFFFFFFFFFF)}
+
+
 # --- Core Deterministic Encoding (RFC 8949 Section 4.2.1) -------------------
 
 
@@ -117,7 +142,12 @@ def _float(value: float) -> bytes:
     # Preferred serialization: the shortest of binary16/32/64 that represents
     # the value exactly (RFC 8949 Section 4.2.1, by way of Section 4.1).
     if math.isnan(value):
-        raise EncodeError("NaN is outside what this reference encodes")
+        # "dtrm" emits one NaN, 0xf97e00, and this reference rejects every
+        # other NaN rather than change the value it hashes.  Decided by bit
+        # pattern: a sign bit or a payload makes the float a non-trivial NaN.
+        if struct.unpack(">Q", struct.pack(">d", value))[0] == _QNAN_BITS64:
+            return b"\xf9\x7e\x00"
+        raise EncodeError("non-trivial NaN: \"dtrm\" emits only 0xf97e00")
     for fmt, ai in (("e", 25), ("f", 26)):
         try:
             packed = struct.pack(">" + fmt, value)
@@ -159,6 +189,8 @@ def encode_core_deterministic(value: Any) -> bytes:
         return _head(4, len(value)) + b"".join(encode_core_deterministic(v) for v in value)
     if isinstance(value, Tag):
         return _head(6, value.number) + encode_core_deterministic(value.value)
+    if isinstance(value, NonTrivialNaN):
+        raise EncodeError("non-trivial NaN: \"dtrm\" emits only 0xf97e00")
     if isinstance(value, Simple):
         if 24 <= value.value <= 31 or not 0 <= value.value <= 255:
             raise EncodeError("invalid simple value")
@@ -190,7 +222,9 @@ def decode(data: bytes) -> Any:
     """Decode exactly one well-formed CBOR data item; trailing octets are an error.
 
     Integers and floating-point values stay distinct, and a map decodes to a
-    Map.  A map whose keys are not all distinct is rejected.
+    Map.  A map whose keys are not all distinct is rejected.  A NaN decodes,
+    by its encoded bits, to the float with bits 7ff8000000000000 when it is
+    the one NaN "dtrm" emits, and to NonTrivialNaN otherwise.
     """
     value, end = _decode(data, 0)
     if end != len(data):
@@ -210,7 +244,15 @@ def _decode(data: bytes, pos: int) -> tuple[Any, int]:
     major, ai = ib >> 5, ib & 0x1F
     if major == 7 and ai in (25, 26, 27):
         n, fmt = {25: (2, ">e"), 26: (4, ">f"), 27: (8, ">d")}[ai]
-        return struct.unpack(fmt, _take(data, pos, n))[0], pos + n
+        raw = _take(data, pos, n)
+        bits = int.from_bytes(raw, "big")
+        exp_mask, mant_mask = _FLOAT_EXP_MANT[ai]
+        if bits & exp_mask == exp_mask and bits & mant_mask:
+            # A NaN: decide from the bits, before struct drops the payload.
+            if bits == _TRIVIAL_NAN_BITS[ai]:
+                return _QNAN, pos + n
+            return NonTrivialNaN(bytes([ib]) + bytes(raw)), pos + n
+        return struct.unpack(fmt, raw)[0], pos + n
     if ai < 24:
         arg = ai
     elif ai in (24, 25, 26, 27):
@@ -282,9 +324,9 @@ ENCODINGS = {CORE_DETERMINISTIC: encode_structured}
 # --- Applicable Content Types (the draft's consistency check) ------------
 
 
-def content_type_matches(encoding: int, content_type: Any) -> bool:
+def content_type_matches(encoding: str, content_type: Any) -> bool:
     """True when a 259 value matches the Applicable Content Types of encoding."""
-    if encoding != CORE_DETERMINISTIC:
+    if not isinstance(encoding, str) or encoding != CORE_DETERMINISTIC:
         return False
     if isinstance(content_type, bool):
         return False
@@ -318,7 +360,7 @@ class Emitted:
 
 
 def emit(value: Any, content_type: Any, *, alg: int = -7, hash_alg: int = -16,
-         encoding: int = CORE_DETERMINISTIC,
+         encoding: str = CORE_DETERMINISTIC,
          label: int = LABEL_DETERMINISTIC_ENCODINGS) -> Emitted:
     """Encode value, hash it, and build the Hash Envelope protected header."""
     if hash_alg not in HASH_ALGS:
@@ -364,7 +406,9 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     encoding = header.get(label)
     has_ctype = header.has(LABEL_PREIMAGE_CONTENT_TYPE)
     ctype = header.get(LABEL_PREIMAGE_CONTENT_TYPE)
-    recognized = isinstance(encoding, int) and not isinstance(encoding, bool) and encoding in ENCODINGS
+    # Only the text string "dtrm" is recognized; any other value, including
+    # the integer 1 an -00 producer writes, is not.
+    recognized = isinstance(encoding, str) and encoding in ENCODINGS
 
     # Consistency with preimage-content-type: this check comes first.
     if has_encoding:

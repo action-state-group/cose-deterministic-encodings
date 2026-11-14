@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import struct
 import unittest
 from pathlib import Path
 
@@ -55,6 +56,14 @@ class Vectors(unittest.TestCase):
                 self.assertEqual(got.outcome, case["expected"]["outcome"])
                 self.assertEqual(got.reason, case["expected"]["reason"])
 
+    def test_reject(self):
+        for case in VECTORS["reject"]:
+            with self.subTest(case["id"]):
+                value = c.decode(bytes.fromhex(case["value_cbor"]))
+                with self.assertRaises(c.EncodeError):
+                    c.emit(value, case["content_type"], hash_alg=case["hash_alg"],
+                           label=VECTORS["header_label"])
+
     def test_every_outcome_is_covered(self):
         outcomes = {v["expected"]["outcome"] for v in VECTORS["verify"]}
         self.assertEqual(outcomes, {c.VERIFIED, c.FAILED, c.UNVERIFIED})
@@ -62,13 +71,63 @@ class Vectors(unittest.TestCase):
 
 class Producer(unittest.TestCase):
     def test_refuses_json_pairing(self):
-        # Consistency with preimage-content-type: a producer MUST NOT pair core-deterministic with application/json.
+        # Consistency with preimage-content-type: a producer MUST NOT pair "dtrm" with application/json.
         with self.assertRaises(ValueError):
             c.emit({"a": 1}, "application/json")
 
-    def test_refuses_nan(self):
-        with self.assertRaises(c.EncodeError):
-            c.encode_core_deterministic(float("nan"))
+    def test_header_value_is_text_string(self):
+        e = c.emit({"a": 1}, "application/cbor")
+        self.assertEqual(c.decode(e.protected).get(c.LABEL_DETERMINISTIC_ENCODINGS), "dtrm")
+
+
+def _f64(bits: int) -> float:
+    return struct.unpack(">d", bits.to_bytes(8, "big"))[0]
+
+
+class NaN(unittest.TestCase):
+    # "dtrm" emits one NaN, 0xf97e00, and this reference rejects every other.
+
+    def test_one_nan_emitted(self):
+        # The vectors emit-nan and emit-nan-binary64, plus the binary32 form.
+        for given in ("a16178f97e00", "a16178fa7fc00000", "a16178fb7ff8000000000000"):
+            with self.subTest(given):
+                e = c.emit(c.decode(bytes.fromhex(given)), "application/cbor")
+                self.assertEqual(e.preimage.hex(), "a16178f97e00")
+
+    def test_non_trivial_nan_rejected(self):
+        # The four reject vectors, plus binary32 forms of each kind.
+        for given in ("f97e01", "f97c01", "f9fe00", "fb7ff8000000000001",
+                      "fa7fc00001", "fa7f800001", "faffc00000", "fbfff8000000000000",
+                      "fb7ff0000000000001", "f9fe01"):
+            with self.subTest(given):
+                v = c.decode(bytes.fromhex("a16178" + given))
+                with self.assertRaises(c.EncodeError):
+                    c.emit(v, "application/cbor")
+
+    def test_decided_from_the_bits_not_the_float(self):
+        # struct.unpack(">e", 7e01) gives the bits 7ff8000000000000: the payload
+        # is gone, and the float alone would look like the one NaN.
+        self.assertEqual(struct.pack(">d", struct.unpack(">e", bytes.fromhex("7e01"))[0]).hex(),
+                         "7ff8000000000000")
+        got = c.decode(bytes.fromhex("f97e01"))
+        self.assertIsInstance(got, c.NonTrivialNaN)
+        self.assertEqual(got.encoded.hex(), "f97e01")
+        trivial = c.decode(bytes.fromhex("f97e00"))
+        self.assertIsInstance(trivial, float)
+        self.assertEqual(struct.pack(">d", trivial).hex(), "7ff8000000000000")
+
+    def test_float_nan_by_bit_pattern(self):
+        self.assertEqual(c.encode_core_deterministic(_f64(0x7FF8000000000000)).hex(), "f97e00")
+        for bits in (0xFFF8000000000000, 0x7FF8000000000001, 0x7FF0000000000001):
+            with self.subTest(hex(bits)), self.assertRaises(c.EncodeError):
+                c.encode_core_deterministic(_f64(bits))
+
+    def test_verifier_holding_non_trivial_nan(self):
+        # The value cannot be re-encoded: unverified, not failed.
+        ok = c.emit({"a": 1}, "application/cbor")
+        got = c.verify(ok.protected, ok.payload, value=c.decode(bytes.fromhex("a16178f97e01")),
+                       has_value=True)
+        self.assertEqual((got.outcome, got.reason), (c.UNVERIFIED, "value-not-encodable"))
 
 
 class Floats(unittest.TestCase):
@@ -82,6 +141,16 @@ class Floats(unittest.TestCase):
                 b = c.encode_core_deterministic(f)
                 self.assertEqual(b.hex(), want)
                 self.assertEqual(c.decode(b), f)
+
+
+class Verifier(unittest.TestCase):
+    def test_header_integer_1_not_recognized(self):
+        # The integer 1 an -00 producer writes is not "dtrm": unverified, never failed.
+        prot = c.encode_core_deterministic({1: -7, 258: -16, 259: "application/json",
+                                            c.LABEL_DETERMINISTIC_ENCODINGS: 1})
+        got = c.verify(prot, b"\x00" * 32, value={"a": 1}, has_value=True)
+        self.assertEqual((got.outcome, got.reason), (c.UNVERIFIED, "encoding-not-implemented"))
+        self.assertFalse(c.content_type_matches(1, "application/cbor"))
 
 
 class Decoder(unittest.TestCase):
