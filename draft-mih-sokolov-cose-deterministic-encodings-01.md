@@ -387,7 +387,7 @@ governs that range:
 
 The suggested value for TBD\_1 is 271, the lowest unassigned value in the
 "Integer values from 256 to 65535" range of the COSE Header Parameters
-registry as of 2026-10-18.
+registry as of 2026-11-14.
 
 --- back
 

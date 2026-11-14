@@ -474,7 +474,7 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 
    The suggested value for TBD_1 is 271, the lowest unassigned value in
    the "Integer values from 256 to 65535" range of the COSE Header
-   Parameters registry as of 2026-10-18.
+   Parameters registry as of 2026-11-14.
 
 9.  References
 
