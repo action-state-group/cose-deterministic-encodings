@@ -25,7 +25,7 @@ Abstract
    COSE Hash Envelope protected-header parameter that identifies the
    encoding, and one value for CBOR content, the text string "dtrm",
    which states that the Core Deterministic Encoding Requirements of RFC
-   8949 were applied.
+   8949 and the NaN rule of draft-ietf-cbor-serialization were applied.
 
 Note to Readers
 
