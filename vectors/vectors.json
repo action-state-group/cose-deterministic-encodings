@@ -1,5 +1,5 @@
 {
-  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it. An emitter refuses each 'reject' value: it decodes, but has no \"dtrm\" encoding.",
+  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it. Each 'reject' value holds a NaN other than 0xf97e00. draft-ietf-cbor-serialization-12 Section 4.1 lets an encoder reject such a NaN or encode it as 0xf97e00. The reference implementations reject it; the 'reject' vectors and 'verify-value-nan-payload' follow that choice.",
   "header_label": 271,
   "emit": [
     {
@@ -256,7 +256,7 @@
     },
     {
       "id": "verify-value-nan-payload",
-      "description": "Holds only a value whose NaN has a non-zero payload (0xf97e01), which \"dtrm\" cannot encode; the payload is the digest of the same map with 0xf97e00, and the verifier does not replace the NaN",
+      "description": "Holds only a value whose NaN has a non-zero payload (0xf97e01). An encoder that rejects such a NaN cannot re-create a preimage; the payload is the digest of the same map with 0xf97e00",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f646474726d",
       "payload": "b4c7e97b7fdae5bfcdad4c1c4008c1564ef4390303506e3979ced92ab47c8b76",
       "value_cbor": "a16178f97e01",

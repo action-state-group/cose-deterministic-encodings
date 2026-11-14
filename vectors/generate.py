@@ -197,8 +197,8 @@ def build() -> dict:
                     header(alg=-7, hash=-16, ctype="application/cbor", enc=1), ex_dig,
                     "unverified", "encoding-not-implemented", value_cbor=ex_value),
         verify_case("verify-value-nan-payload", "Holds only a value whose NaN has a non-zero "
-                    "payload (0xf97e01), which \"dtrm\" cannot encode; the payload is the digest "
-                    "of the same map with 0xf97e00, and the verifier does not replace the NaN",
+                    "payload (0xf97e01). An encoder that rejects such a NaN cannot re-create a "
+                    "preimage; the payload is the digest of the same map with 0xf97e00",
                     ok, sha256(h("a1 61 78 f9 7e 00")),
                     "unverified", "value-not-encodable", value_cbor=h("a1 61 78 f9 7e 01")),
         verify_case("verify-preimage-unknown-encoding", "Holds the preimage; an unknown encoding "
@@ -266,8 +266,11 @@ def build() -> dict:
                        "label 271 is the value the draft suggests for TBD_1; it is not "
                        "assigned. 'protected' is the serialized protected header map. A "
                        "verifier holding 'value_cbor' decodes it and re-creates the preimage; "
-                       "one holding 'preimage' hashes it. An emitter refuses each 'reject' "
-                       "value: it decodes, but has no \"dtrm\" encoding.",
+                       "one holding 'preimage' hashes it. Each 'reject' value holds a NaN "
+                       "other than 0xf97e00. draft-ietf-cbor-serialization-12 Section 4.1 lets "
+                       "an encoder reject such a NaN or encode it as 0xf97e00. The reference "
+                       "implementations reject it; the 'reject' vectors and "
+                       "'verify-value-nan-payload' follow that choice.",
         "header_label": L,
         "emit": emit_cases,
         "reject": reject_cases,

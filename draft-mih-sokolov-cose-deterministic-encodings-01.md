@@ -184,7 +184,7 @@ Unverified:
   neither the preimage nor a structured value; if it holds a structured
   value but not the preimage, and deterministic-encodings is absent or
   carries a value the verifier does not recognize or implement, or the
-  identified encoding cannot encode that value
+  verifier cannot produce the identified encoding of that value
   ({{verification}}); or if it does not implement the hash algorithm
   identified by payload-hash-alg (258).
 
@@ -296,10 +296,9 @@ from preimage-content-type (259) or from the structure of the value. If
 deterministic-encodings is absent, or carries a value the verifier does
 not recognize or implement, the verifier cannot re-create the preimage: it
 MUST NOT report the content binding as verified, and MUST report it as
-unverified rather than as failed. The same applies when the identified
-encoding cannot encode the structured value -- for example, a value that
-holds a NaN that "dtrm" excludes ({{dtrm}}); the verifier MUST NOT change
-the value to make it encodable.
+unverified rather than as failed. The same applies when the verifier
+cannot produce the identified encoding of the structured value -- for
+example, when its encoder rejects a NaN that "dtrm" excludes ({{dtrm}}).
 
 A Hash Envelope produced without this parameter -- including any produced
 before the parameter was registered -- is not defective: its content binding

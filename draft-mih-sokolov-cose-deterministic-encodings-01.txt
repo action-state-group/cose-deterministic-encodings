@@ -204,9 +204,10 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
       case if it holds neither the preimage nor a structured value; if
       it holds a structured value but not the preimage, and
       deterministic-encodings is absent or carries a value the verifier
-      does not recognize or implement, or the identified encoding cannot
-      encode that value (Section 4.3); or if it does not implement the
-      hash algorithm identified by payload-hash-alg (258).
+      does not recognize or implement, or the verifier cannot produce
+      the identified encoding of that value (Section 4.3); or if it does
+      not implement the hash algorithm identified by payload-hash-alg
+      (258).
 
 3.  The deterministic-encodings Header Parameter
 
@@ -214,7 +215,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
       which a structured value was serialized to create the bytes that
       were hashed (preimage) to produce the payload, given as a text
       string (Section 3.1).
-
 
 
 
@@ -348,10 +348,10 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    absent, or carries a value the verifier does not recognize or
    implement, the verifier cannot re-create the preimage: it MUST NOT
    report the content binding as verified, and MUST report it as
-   unverified rather than as failed.  The same applies when the
-   identified encoding cannot encode the structured value -- for
-   example, a value that holds a NaN that "dtrm" excludes (Section 3.1);
-   the verifier MUST NOT change the value to make it encodable.
+   unverified rather than as failed.  The same applies when the verifier
+   cannot produce the identified encoding of the structured value -- for
+   example, when its encoder rejects a NaN that "dtrm" excludes
+   (Section 3.1).
 
    A Hash Envelope produced without this parameter -- including any
    produced before the parameter was registered -- is not defective: its
