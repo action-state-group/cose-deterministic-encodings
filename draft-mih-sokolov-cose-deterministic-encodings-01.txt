@@ -5,12 +5,12 @@
 COSE                                                              S. Mih
 Internet-Draft                                  Action State Group, Inc.
 Intended status: Standards Track                              A. Sokolov
-Expires: 30 April 2027                                   Tyche Institute
-                                                         27 October 2026
+Expires: 19 May 2027                                     Tyche Institute
+                                                        15 November 2026
 
 
                     Deterministic Encodings for COSE
-           draft-mih-sokolov-cose-deterministic-encodings-00
+           draft-mih-sokolov-cose-deterministic-encodings-01
 
 Abstract
 
@@ -23,9 +23,9 @@ Abstract
    encoding for the same content type, and the preimage content type
    does not identify which one was applied.  This document defines a
    COSE Hash Envelope protected-header parameter that identifies the
-   encoding, and an IANA registry of deterministic encodings whose
-   initial entry is the Core Deterministic Encoding Requirements of RFC
-   8949.
+   encoding, and one value for CBOR content, the text string "dtrm",
+   which states that the Core Deterministic Encoding Requirements of RFC
+   8949 were applied.
 
 Note to Readers
 
@@ -53,12 +53,12 @@ Status of This Memo
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 1]
+Mih & Sokolov              Expires 19 May 2027                  [Page 1]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
-   This Internet-Draft will expire on 30 April 2027.
+   This Internet-Draft will expire on 19 May 2027.
 
 Copyright Notice
 
@@ -109,9 +109,9 @@ Copyright Notice
 
 
 
-Mih & Sokolov             Expires 30 April 2027                 [Page 2]
+Mih & Sokolov              Expires 19 May 2027                  [Page 2]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    rather than transmit, by fixing how that structure is encoded
@@ -130,17 +130,21 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    value from one encoded under a different rule.
 
    This document defines one protected-header parameter, deterministic-
-   encodings, which identifies that encoding, and a small IANA registry
-   of encoding identifiers.  It uses the extension point the Hash
-   Envelope protected header already provides (Section 4 of [RFC9995]: *
-   (int / tstr) => any).  The encoding is not carried as a media-type
-   parameter of preimage-content-type (259).  The application/cbor media
-   type defines no parameters ([RFC8949] Section 9.3), so such a
-   parameter would have to be registered for every media type the
-   encoding applies to, and a CoAP Content-Format number carries only
-   the parameters fixed in its registry entry ([RFC7252] Section 12.3),
-   so each pairing of media type and encoding would also need its own
-   number.
+   encodings, which identifies that encoding, and one value for CBOR
+   content, the text string "dtrm", the identifier the CBOR working
+   group defines for deterministic serialization (Section 3.1).  It uses
+   the extension point the Hash Envelope protected header already
+   provides (Section 4 of [RFC9995]: * (int / tstr) => any).  The
+   encoding is not carried as a media-type parameter of preimage-
+   content-type (259).  The application/cbor media type defines no
+   parameters ([RFC8949] Section 9.3), so such a parameter would have to
+   be registered for every media type the encoding applies to, and a
+   CoAP Content-Format number carries only the parameters fixed in its
+   registry entry ([RFC7252] Section 12.3), so each pairing of media
+   type and encoding would also need its own number.  A profile that has
+   its own media type, such as application/vnd.ipld.dag-cbor [DAG-CBOR],
+   is already identified by 259; content labelled application/cbor, or
+   with an application's own type such as application/swid+cbor, is not.
 
    The scope of this document is structured values, such as CBOR data
    items, and the deterministic encodings that serialize them.  Media
@@ -161,13 +165,9 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 
 
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 3]
+Mih & Sokolov              Expires 19 May 2027                  [Page 3]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    "COSE", "COSE_Sign1", and "protected header" are defined in
@@ -204,26 +204,26 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
       case if it holds neither the preimage nor a structured value; if
       it holds a structured value but not the preimage, and
       deterministic-encodings is absent or carries a value the verifier
-      does not recognize or implement (Section 4.3); or if it does not
-      implement the hash algorithm identified by payload-hash-alg (258).
+      does not recognize or implement, or the verifier cannot produce
+      the identified encoding of that value (Section 4.3); or if it does
+      not implement the hash algorithm identified by payload-hash-alg
+      (258).
 
 3.  The deterministic-encodings Header Parameter
 
    TBD_1:  deterministic-encodings.  The deterministic encoding with
       which a structured value was serialized to create the bytes that
-      were hashed (preimage) to produce the payload, given as the
-      integer Value (not the Name) assigned to an encoding in the COSE
-      Deterministic Encodings registry (Section 8.2).
+      were hashed (preimage) to produce the payload, given as a text
+      string (Section 3.1).
 
 
 
 
 
 
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 4]
+Mih & Sokolov              Expires 19 May 2027                  [Page 4]
 
-Internet-Draft        COSE Deterministic Encodings          October 2026
+Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
    It extends [RFC9995] by adding one optional member to the
@@ -236,7 +236,7 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
        &(payload_hash_alg: 258) => int,
        ? &(payload_preimage_content_type: 259) => uint / tstr,
        ? &(payload_location: 260) => tstr,
-       ? &(deterministic_encodings: TBD_1) => int,
+       ? &(deterministic_encodings: TBD_1) => tstr,
        * (int / tstr) => any
    }
 
@@ -247,6 +247,21 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    (Section 4.2).  A producer MUST NOT list label TBD_1 in the crit
    header parameter ([RFC9052] Section 3.1), so that a verifier that
    implements only [RFC9995] can ignore it.
+
+3.1.  The Value "dtrm"
+
+   This document defines one value of deterministic-encodings, for CBOR
+   content: the text string "dtrm".  It states that the structured value
+   was encoded under the Core Deterministic Encoding Requirements of
+   [RFC8949] Section 4.2.1.  The name "dtrm" is the one
+   [I-D.ietf-cbor-serialization] (Section 8) gives to its deterministic
+   serialization (Section 5), which is [RFC8949] Section 4.2.1 except
+   for NaNs: "dtrm" excludes non-trivial NaNs, as the CBOR working group
+   defines it (Sections 4.1 and 5.1, and Appendix B.5, of
+   [I-D.ietf-cbor-serialization]).  For a CBOR sequence [RFC8742], each
+   data item is encoded according to these requirements.  Apart from
+   that rule for NaNs, the choices that [RFC8949] Section 4.2.2 leaves
+   to a protocol are not part of "dtrm" (Section 6).
 
 4.  Producer and Verifier Behavior
 
@@ -259,28 +274,29 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    encoding actually applied.  A producer that serializes a structured
    value without a deterministic encoding, or whose preimage is not the
    serialization of a structured value -- for example application/octet-
+
+
+
+Mih & Sokolov              Expires 19 May 2027                  [Page 5]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
    stream content, an image, or an archive -- has no encoding to
    identify, and the parameter is absent; the content binding can then
    be checked only from the preimage bytes.
 
 4.2.  Consistency with preimage-content-type
 
-   Each registered encoding lists the content types it applies to, as
-   the Applicable Content Types of its registry entry (Section 8.2).
-   When deterministic-encodings is present, preimage-content-type (259)
-   MUST also be present, and its value MUST match one of the Applicable
+   The Applicable Content Types of "dtrm" are application/cbor,
+   application/cbor-seq, application/cose, application/cose-key,
+   application/cose-key-set, application/cose-x509, application/cwt, and
+   application/multipart-core, and media types with the +cbor, +cbor-
+   seq, +cose, +cwt, or +sd-cwt structured syntax suffix.  When
+   deterministic-encodings is present, preimage-content-type (259) MUST
+   also be present, and its value MUST match one of the Applicable
    Content Types of the encoding that deterministic-encodings
    identifies:
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 5]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
    *  A 259 value that is a media-type name matches when its type and
       subtype -- with any parameters removed, and compared case-
@@ -293,15 +309,15 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
       number to a matching media type with no content coding.
 
    A producer MUST NOT emit a Hash Envelope that violates these rules --
-   for example, one pairing core-deterministic with application/json.  A
-   verifier that finds deterministic-encodings present with preimage-
-   content-type (259) absent, or with a 259 value that does not match
-   the Applicable Content Types of an encoding the verifier recognizes,
-   MUST report the content binding as failed, without attempting
-   recomputation.  This check comes first, and takes precedence over
-   Section 4.3.  This outcome applies only to Hash Envelopes that carry
-   deterministic-encodings; a verifier that implements only [RFC9995]
-   ignores the parameter, and its results are unchanged.
+   for example, one pairing "dtrm" with application/json.  A verifier
+   that finds deterministic-encodings present with preimage-content-type
+   (259) absent, or with a 259 value that does not match the Applicable
+   Content Types of an encoding the verifier recognizes, MUST report the
+   content binding as failed, without attempting recomputation.  This
+   check comes first, and takes precedence over Section 4.3.  This
+   outcome applies only to Hash Envelopes that carry deterministic-
+   encodings; a verifier that implements only [RFC9995] ignores the
+   parameter, and its results are unchanged.
 
 4.3.  Verifying the Content Binding
 
@@ -313,6 +329,15 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    information, and applies whether or not deterministic-encodings is
    present, subject to Section 4.2.
 
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                  [Page 6]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
    A verifier that holds only a structured value -- for example, content
    it received, stored, or decoded in a form other than the preimage
    itself -- has to re-create the preimage by encoding that value, and
@@ -323,20 +348,10 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    absent, or carries a value the verifier does not recognize or
    implement, the verifier cannot re-create the preimage: it MUST NOT
    report the content binding as verified, and MUST report it as
-   unverified rather than as failed.
-
-
-
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 6]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
+   unverified rather than as failed.  The same applies when the verifier
+   cannot produce the identified encoding of the structured value -- for
+   example, when its encoder rejects a NaN that "dtrm" excludes
+   (Section 3.1).
 
    A Hash Envelope produced without this parameter -- including any
    produced before the parameter was registered -- is not defective: its
@@ -362,12 +377,22 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
        / alg                     / 1: -7, # ES256
        / hash algorithm          / 258: -16, # sha-256
        / preimage type           / 259: "application/cbor",
-       / deterministic encodings / TBD_1: 1, # core-deterministic
+       / deterministic encodings / TBD_1: "dtrm",
      }>>
      / unprotected / {},
      / payload     / h'a0d3af9e...c893b5e3', # digest above
      / signature   / h'...'  # 64 octets, r || s
    ])
+
+
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                  [Page 7]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
 
    [RFC9393] registers application/swid+cbor for Concise Software
    Identification (CoSWID) tags but does not require a deterministic
@@ -375,24 +400,14 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    different byte sequences.  A producer that applies the Core
    Deterministic Encoding Requirements before hashing a CoSWID tag sets
    preimage-content-type (259) to application/swid+cbor and
-   deterministic-encodings to core-deterministic (Value 1) -- recording
-   its own choice, not a CoSWID requirement -- so that a verifier
-   holding the decoded tag knows how to re-create the preimage.
+   deterministic-encodings to "dtrm" -- recording its own choice, not a
+   CoSWID requirement -- so that a verifier holding the decoded tag
+   knows how to re-create the preimage.
 
 6.  Security Considerations
 
    The preimage is exactly the bytes that the identified encoding
    produces, not a rendering of them.
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 7]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
 
    A deterministic encoding fixes the preimage for a given structured
    value, so decoding a preimage and encoding the result again
@@ -406,13 +421,12 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    not to the encoding that deterministic-encodings identifies.  A
    choice that changes only how the same data item is serialized, such
    as encoding every floating-point value as binary64, is a different
-   encoding and needs its own value.  A producer that re-reads stored
-   content before hashing MUST ensure the preimage it hashes is byte-
-   identical to the encoding's own output.  A verifier that re-creates a
-   preimage from a structured value (Section 4.3) needs that value
-   exactly as the producer encoded it; otherwise its recomputed digest
-   can differ from the payload, and the content binding is then reported
-   as failed.
+   encoding, not "dtrm".  A producer that re-reads stored content before
+   hashing MUST ensure the preimage it hashes is byte-identical to the
+   encoding's own output.  A verifier that re-creates a preimage from a
+   structured value (Section 4.3) needs that value exactly as the
+   producer encoded it; otherwise its recomputed digest can differ from
+   the payload, and the content binding is then reported as failed.
 
 7.  Privacy Considerations
 
@@ -425,6 +439,17 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
 
 8.  IANA Considerations
 
+
+
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                  [Page 8]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
 8.1.  COSE Header Parameters
 
    IANA is requested to register the following entry in the "COSE Header
@@ -432,110 +457,24 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    range, under the Specification Required policy ([RFC8126]
    Section 4.6) that governs that range:
 
+    +================+=====+=====+========+===============+===========+
+    | Name           |Label|Value|Value   | Description   | Reference |
+    |                |     |Type |Registry|               |           |
+    +================+=====+=====+========+===============+===========+
+    | deterministic- |TBD_1|tstr |none    | Deterministic | This      |
+    | encodings      |     |     |        | encoding      | document  |
+    |                |     |     |        | applied to    |           |
+    |                |     |     |        | create the    |           |
+    |                |     |     |        | preimage of a |           |
+    |                |     |     |        | Hash Envelope |           |
+    |                |     |     |        | payload       |           |
+    +----------------+-----+-----+--------+---------------+-----------+
 
-
-
-
-
-
-
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 8]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
-   +================+=====+=====+=============+=============+=========+
-   | Name           |Label|Value|Value        |Description  |Reference|
-   |                |     |Type |Registry     |             |         |
-   +================+=====+=====+=============+=============+=========+
-   | deterministic- |TBD_1|int  |COSE         |Deterministic|This     |
-   | encodings      |     |     |Deterministic|encoding     |document |
-   |                |     |     |Encodings    |applied to   |         |
-   |                |     |     |(Section 8.2)|create the   |         |
-   |                |     |     |             |preimage of a|         |
-   |                |     |     |             |Hash Envelope|         |
-   |                |     |     |             |payload      |         |
-   +----------------+-----+-----+-------------+-------------+---------+
-
-                                 Table 1
+                                  Table 1
 
    The suggested value for TBD_1 is 271, the lowest unassigned value in
    the "Integer values from 256 to 65535" range of the COSE Header
-   Parameters registry as of 2026-10-18.
-
-8.2.  COSE Deterministic Encodings Registry
-
-   IANA is requested to create a new registry, "COSE Deterministic
-   Encodings".  The registry identifies deterministic encodings of
-   structured content; it carries no Hash Envelope semantics of its own,
-   and a value is meaningful only through a parameter, such as
-   deterministic-encodings (Section 3), that gives it a role.  The
-   registry is not specific to one data model or content type: an entry
-   applies wherever preimage-content-type (259) matches its Applicable
-   Content Types (Section 4.2), and encodings for other structured
-   content types can be registered under the policy below.
-
-   A registry is used, rather than a fixed reference, for the reasons in
-   Section 1.  A profile that has its own media type, such as
-   application/vnd.ipld.dag-cbor [DAG-CBOR], is already identified by
-   259; content labelled application/cbor, or with an application's own
-   type such as application/swid+cbor, is not.  Rules that only restrict
-   which data items may occur produce Section 4.2.1 output and use value
-   1; this includes the deterministic serialization of
-   [I-D.ietf-cbor-serialization], which only excludes non-trivial NaNs
-   (Appendix B.5 of that document).
-
-   Registration policy: Specification Required ([RFC8126] Section 4.6).
-   The registration template is: Value (an unsigned integer), Name,
-   Description, Applicable Content Types (media types and structured
-   syntax suffixes, matched against 259 as Section 4.2 specifies),
-   Reference, and Change Controller.  The designated expert checks that
-   the referenced specification defines exactly one deterministic
-   encoding for the value, together with any constraints on the
-
-
-
-Mih & Sokolov             Expires 30 April 2027                 [Page 9]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
-   structured values it accepts, and that its Applicable Content Types
-   are correct and can be matched as Section 4.2 specifies.  Entries are
-   immutable: the registry grows by adding values, never by
-   reinterpreting an existing one.  An entry MAY be withdrawn through
-   the same procedure; a withdrawn value and its name are never
-   reassigned.
-
-   Initial contents:
-
-    +=====+====================+===============+=========+============+
-    |Value| Name               | Description   |Reference| Change     |
-    |     |                    |               |         | Controller |
-    +=====+====================+===============+=========+============+
-    |1    | core-deterministic | Core          |[RFC8949]| IETF       |
-    |     |                    | Deterministic |Section  |            |
-    |     |                    | Encoding      |4.2.1    |            |
-    |     |                    | Requirements  |         |            |
-    +-----+--------------------+---------------+---------+------------+
-
-                                  Table 2
-
-   The Applicable Content Types of value 1 are application/cbor,
-   application/cbor-seq, application/cose, application/cose-key,
-   application/cose-key-set, application/cose-x509, application/cwt, and
-   application/multipart-core, and media types with the +cbor, +cbor-
-   seq, +cose, +cwt, or +sd-cwt structured syntax suffix.  For a CBOR
-   sequence [RFC8742], each data item is encoded according to these
-   requirements.  Value 1 is exactly [RFC8949] Section 4.2.1; the
-   choices that Section 4.2.2 leaves to a protocol are not part of it
-   (Section 6).
+   Parameters registry as of 2026-11-14.
 
 9.  References
 
@@ -551,21 +490,21 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
               <https://www.rfc-editor.org/rfc/rfc6838>.
 
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                [Page 10]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
    [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
               Application Protocol (CoAP)", RFC 7252,
               DOI 10.17487/RFC7252, June 2014,
               <https://www.rfc-editor.org/rfc/rfc7252>.
+
+
+
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                  [Page 9]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
 
    [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
               Writing an IANA Considerations Section in RFCs", BCP 26,
@@ -606,29 +545,53 @@ Internet-Draft        COSE Deterministic Encodings          October 2026
    [DAG-CBOR] IPLD, "Specification: DAG-CBOR", 2026,
               <https://ipld.io/specs/codecs/dag-cbor/spec/>.
 
-
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                [Page 11]
-
-Internet-Draft        COSE Deterministic Encodings          October 2026
-
-
    [I-D.ietf-cbor-serialization]
               Lundblade, L., "CBOR Serialization and Determinism", Work
               in Progress, Internet-Draft, draft-ietf-cbor-
-              serialization-11, 23 October 2026,
+              serialization-12, 30 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
-              serialization-11>.
+              serialization-12>.
+
+
+
+
+
+
+Mih & Sokolov              Expires 19 May 2027                 [Page 10]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
 
    [RFC9393]  Birkholz, H., Fitzgerald-McKay, J., Schmidt, C., and D.
               Waltermire, "Concise Software Identification Tags",
               RFC 9393, DOI 10.17487/RFC9393, June 2023,
               <https://www.rfc-editor.org/rfc/rfc9393>.
+
+Appendix A.  Changes from Version 00
+
+   This section is to be removed before publishing as an RFC.
+
+   *  The "COSE Deterministic Encodings" registry is removed.  This
+      document requests only the registration of the header parameter
+      (Section 8).
+
+   *  The value of deterministic-encodings is the text string "dtrm"
+      (Section 3.1), the name [I-D.ietf-cbor-serialization] gives to its
+      deterministic serialization.  Version 00 used the integer 1, the
+      value its registry assigned to core-deterministic.  A verifier of
+      this version handles the integer 1 as a value it does not
+      recognize (Section 4.3).
+
+   *  "dtrm" excludes non-trivial NaNs, as [I-D.ietf-cbor-serialization]
+      defines.  In version 00, value 1 was [RFC8949] Section 4.2.1
+      without that exclusion.
+
+   *  The Applicable Content Types, which version 00 put in the registry
+      entry, are listed in Section 4.2.
+
+   *  A verifier that cannot produce the identified encoding of a
+      structured value reports the content binding as unverified
+      (Section 4.3).
 
 Acknowledgments
 
@@ -650,23 +613,4 @@ Authors' Addresses
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Mih & Sokolov             Expires 30 April 2027                [Page 12]
+Mih & Sokolov              Expires 19 May 2027                 [Page 11]
