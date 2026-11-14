@@ -217,8 +217,8 @@ encoded under the Core Deterministic Encoding Requirements of {{RFC8949}}
 Section 4.2.1. The name "dtrm" is the one {{I-D.ietf-cbor-serialization}}
 (Section 8) gives to its deterministic serialization (Section 5), which is
 {{RFC8949}} Section 4.2.1 except for NaNs: "dtrm" excludes non-trivial NaNs,
-as the CBOR working group defines it ({{I-D.ietf-cbor-serialization}}
-Sections 4.1 and 5.1, and Appendix B.5). For a CBOR sequence {{RFC8742}}, each data item is
+as the CBOR working group defines it (Sections 4.1 and 5.1, and
+Appendix B.5, of {{I-D.ietf-cbor-serialization}}). For a CBOR sequence {{RFC8742}}, each data item is
 encoded according to these requirements. The choices that {{RFC8949}}
 Section 4.2.2 leaves to a protocol are not part of "dtrm" ({{security}}).
 
