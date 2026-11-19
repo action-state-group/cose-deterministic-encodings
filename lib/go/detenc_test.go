@@ -195,7 +195,7 @@ func TestDecoderRejects(t *testing.T) {
 
 func TestProducerRefusesJSON(t *testing.T) {
 	if _, err := Emit(Map{{"a", I(1)}}, "application/json", -7, -16, LabelDeterministicEncodings); err == nil {
-		t.Fatal("emitted \"dtrm\" with application/json")
+		t.Fatal("emitted the CBOR URI with application/json")
 	}
 }
 
@@ -208,8 +208,23 @@ func TestHeaderValueIsTextString(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := h.(Map).Get(LabelDeterministicEncodings); got != "dtrm" {
-		t.Fatalf("header value %#v, want \"dtrm\"", got)
+	if got, _ := h.(Map).Get(LabelDeterministicEncodings); got != CoreDeterministic {
+		t.Fatalf("header value %#v, want %q", got, CoreDeterministic)
+	}
+}
+
+// The URI is read from the draft, where it is shown on two lines.
+func TestURIMatchesDraftText(t *testing.T) {
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-02.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile("no line\\s+break or space between them:\\s+~~~\n(\\S+)\n(\\S+)\n~~~").FindSubmatch(src)
+	if m == nil {
+		t.Fatal("URI block not found in the draft")
+	}
+	if got := string(m[1]) + string(m[2]); got != CoreDeterministic {
+		t.Fatalf("draft URI %q, code %q", got, CoreDeterministic)
 	}
 }
 

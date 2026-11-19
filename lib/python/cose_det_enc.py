@@ -30,9 +30,13 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-# The one value the draft defines: RFC 8949 Section 4.2.1, as the
-# deterministic serialization ("dtrm") of draft-ietf-cbor-serialization.
-CORE_DETERMINISTIC = "dtrm"
+# The one value the draft defines: the URI of deterministic serialization
+# (Section 5, the serialization named "dtrm") of draft-ietf-cbor-serialization,
+# version 13.  It is compared as a string and never dereferenced.
+CORE_DETERMINISTIC = (
+    "https://datatracker.ietf.org/doc/html/"
+    "draft-ietf-cbor-serialization-13#section-5"
+)
 
 VERIFIED = "verified"
 FAILED = "failed"
@@ -45,7 +49,7 @@ HASH_ALGS = {
     -44: "sha512",
 }
 
-# Applicable Content Types of "dtrm" (the draft's consistency section).
+# Applicable Content Types of that URI (the draft's consistency section).
 CORE_DETERMINISTIC_MEDIA_TYPES = frozenset({
     "application/cbor",
     "application/cbor-seq",
@@ -407,8 +411,9 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     encoding = header.get(label)
     has_ctype = header.has(LABEL_PREIMAGE_CONTENT_TYPE)
     ctype = header.get(LABEL_PREIMAGE_CONTENT_TYPE)
-    # Only the text string "dtrm" is recognized; any other value, including
-    # the integer 1 an -00 producer writes, is not.
+    # Only the URI the draft defines is recognized; any other value, including
+    # the integer 1 an -00 producer writes and the text string "dtrm" an -01
+    # producer writes, is not.
     recognized = isinstance(encoding, str) and encoding in ENCODINGS
 
     # Consistency with preimage-content-type: this check comes first.

@@ -37,10 +37,12 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is the one value the draft defines, the text string
-// "dtrm": RFC 8949 Section 4.2.1, as the deterministic serialization of
-// draft-ietf-cbor-serialization.
-const CoreDeterministic = "dtrm"
+// CoreDeterministic is the one value the draft defines: the URI of
+// deterministic serialization (Section 5, the serialization named "dtrm") of
+// draft-ietf-cbor-serialization, version 13. It is compared as a string and
+// never dereferenced.
+const CoreDeterministic = "https://datatracker.ietf.org/doc/html/" +
+	"draft-ietf-cbor-serialization-13#section-5"
 
 // Content-binding outcomes.
 const (
@@ -671,8 +673,9 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	}
 	encRaw, hasEncoding := header.Get(label)
 	ctype, hasCtype := header.Get(LabelPreimageContentType)
-	// Only the text string "dtrm" is recognized; any other value, including
-	// the integer 1 an -00 producer writes, is not.
+	// Only the URI the draft defines is recognized; any other value, including
+	// the integer 1 an -00 producer writes and the text string "dtrm" an -01
+	// producer writes, is not.
 	enc, isText := encRaw.(string)
 	recognized := hasEncoding && isText && enc == CoreDeterministic
 

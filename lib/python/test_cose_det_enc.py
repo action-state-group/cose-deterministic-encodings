@@ -71,13 +71,24 @@ class Vectors(unittest.TestCase):
 
 class Producer(unittest.TestCase):
     def test_refuses_json_pairing(self):
-        # Consistency with preimage-content-type: a producer MUST NOT pair "dtrm" with application/json.
+        # Consistency with preimage-content-type: a producer MUST NOT pair the CBOR URI with application/json.
         with self.assertRaises(ValueError):
             c.emit({"a": 1}, "application/json")
 
-    def test_header_value_is_text_string(self):
+    def test_header_value_is_the_uri(self):
         e = c.emit({"a": 1}, "application/cbor")
-        self.assertEqual(c.decode(e.protected).get(c.LABEL_DETERMINISTIC_ENCODINGS), "dtrm")
+        self.assertEqual(c.decode(e.protected).get(c.LABEL_DETERMINISTIC_ENCODINGS),
+                         c.CORE_DETERMINISTIC)
+
+    def test_uri_matches_draft_text(self):
+        # The URI is read from the draft, where it is shown on two lines.
+        m = re.search(r"no line\s+break or space between them:\s+~~~\n(\S+)\n(\S+)\n~~~", DRAFT)
+        self.assertIsNotNone(m, "URI block not found in the draft")
+        self.assertEqual(m.group(1) + m.group(2), c.CORE_DETERMINISTIC)
+
+    def test_dtrm_text_not_recognized(self):
+        # The text string "dtrm" an -01 producer writes is not the URI.
+        self.assertFalse(c.content_type_matches("dtrm", "application/cbor"))
 
 
 def _f64(bits: int) -> float:
