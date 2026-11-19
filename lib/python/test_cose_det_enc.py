@@ -16,7 +16,7 @@ import cose_det_enc as c
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTORS = json.loads((ROOT / "vectors" / "vectors.json").read_text())
-DRAFT = (ROOT / "draft-mih-sokolov-cose-deterministic-encodings-01.md").read_text()
+DRAFT = (ROOT / "draft-mih-sokolov-cose-deterministic-encodings-02.md").read_text()
 
 
 class DraftExample(unittest.TestCase):

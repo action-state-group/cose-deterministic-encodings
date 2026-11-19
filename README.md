@@ -8,10 +8,14 @@ may be in use, and the Hash Envelope does not identify which one produced the
 hashed bytes — so a verifier cannot reliably recompute the hash. This draft
 defines one Hash Envelope protected-header parameter
 (`deterministic-encodings`), naming the deterministic encoding a producer
-applied before hashing a Hash Envelope payload, and one value for CBOR content:
-the text string `"dtrm"`, the identifier the CBOR working group defines for
-deterministic serialization, which states that the Core Deterministic Encoding
-Requirements of RFC 8949 §4.2.1 were applied. It extends the Hash Envelope
+applied before hashing a Hash Envelope payload, by a URI, and one URI for CBOR
+content: the URI of deterministic serialization (the serialization named
+`"dtrm"`) as the CBOR working group defines it in `draft-ietf-cbor-serialization`,
+which is RFC 8949 §4.2.1 except for non-trivial NaNs. Until that document is an
+RFC, the URI names its version 13:
+`https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-13#section-5`.
+Other URIs, for other encodings of CBOR or for other content types, are out of
+scope. It extends the Hash Envelope
 through its existing extension point and changes nothing in RFC 9995.
 
 ## Status
@@ -46,7 +50,7 @@ make clean
 A minimal emitter and verifier for the `deterministic-encodings` header, in
 Python (`lib/python/`) and Go (`lib/go/`), each using only its standard
 library, and a shared set of vectors (`vectors/vectors.json`). The emitter
-encodes a structured value under `"dtrm"` (RFC 8949 §4.2.1),
+encodes a structured value under that encoding,
 hashes it, and builds the Hash Envelope protected header; the verifier
 reports a content binding as verified, failed, or unverified as the draft's
 "Producer and Verifier Behavior" section specifies. Signing is out of scope.
@@ -61,4 +65,4 @@ python3 -m unittest discover -s lib/python
 ```
 
 Current draft:
-[`draft-mih-sokolov-cose-deterministic-encodings-01`](draft-mih-sokolov-cose-deterministic-encodings-01.md).
+[`draft-mih-sokolov-cose-deterministic-encodings-02`](draft-mih-sokolov-cose-deterministic-encodings-02.md).
