@@ -8,15 +8,18 @@ may be in use, and the Hash Envelope does not identify which one produced the
 hashed bytes — so a verifier cannot reliably recompute the hash. This draft
 defines one Hash Envelope protected-header parameter
 (`deterministic-encodings`), naming the deterministic encoding a producer
-applied before hashing a Hash Envelope payload, by a URI, and one URI for CBOR
-content: the URI of deterministic serialization (the serialization named
+applied before hashing a Hash Envelope payload by a URL, and lists one URL, for
+CBOR content: the URL of deterministic serialization (the serialization named
 `"dtrm"`) as the CBOR working group defines it in `draft-ietf-cbor-serialization`,
 which is RFC 8949 §4.2.1 except for non-trivial NaNs. Until that document is an
-RFC, the URI names its version 13:
+RFC, the URL names its version 13:
 `https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-13#section-5`.
-Other URIs, for other encodings of CBOR or for other content types, are out of
-scope. It extends the Hash Envelope
-through its existing extension point and changes nothing in RFC 9995.
+Anyone who specifies another encoding can identify it by a URL of its own and is
+responsible for it; no registry is needed. A verifier that does not implement the
+identified encoding ignores the parameter and checks the payload as RFC 9995
+describes, so the check is verified or failed, with no other outcome. The draft
+extends the Hash Envelope through its existing extension point and changes
+nothing in RFC 9995.
 
 ## Status
 
@@ -52,8 +55,9 @@ Python (`lib/python/`) and Go (`lib/go/`), each using only its standard
 library, and a shared set of vectors (`vectors/vectors.json`). The emitter
 encodes a structured value under that encoding,
 hashes it, and builds the Hash Envelope protected header; the verifier
-reports a content binding as verified, failed, or unverified as the draft's
-"Producer and Verifier Behavior" section specifies. Signing is out of scope.
+reports a content binding as verified or failed, with a reason code, as the
+draft's "Producer and Verifier Behavior" section specifies. Signing is out of
+scope.
 The vectors include the draft's own example, whose preimage and digest both
 test suites read from the draft text. Label 271 is the value the draft suggests for TBD\_1; it is not an
 assigned value.

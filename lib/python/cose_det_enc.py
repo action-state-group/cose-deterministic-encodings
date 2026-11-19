@@ -5,9 +5,8 @@ A minimal, standard-library-only reference for
 draft-mih-sokolov-cose-deterministic-encodings.  It builds the protected header
 and payload of a COSE Hash Envelope (RFC 9995) whose preimage is a structured
 value encoded under the Core Deterministic Encoding Requirements (RFC 8949
-Section 4.2.1), and checks a content binding, reporting verified, failed or
-unverified as the draft's "Producer
-and Verifier Behavior" section specifies.
+Section 4.2.1), and checks a content binding, reporting verified or failed
+as the draft's "Producer and Verifier Behavior" section specifies.
 
 Signing is out of scope: the header parameter concerns the content binding,
 which the draft keeps independent of signature validity.
@@ -30,7 +29,7 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-# The one value the draft defines: the URI of deterministic serialization
+# The one URL the draft lists: the URL of deterministic serialization
 # (Section 5, the serialization named "dtrm") of draft-ietf-cbor-serialization,
 # version 13.  It is compared as a string and never dereferenced.
 CORE_DETERMINISTIC = (
@@ -38,9 +37,10 @@ CORE_DETERMINISTIC = (
     "draft-ietf-cbor-serialization-13#section-5"
 )
 
+# The check of a content binding succeeds or fails; the draft adds no other
+# outcome.
 VERIFIED = "verified"
 FAILED = "failed"
-UNVERIFIED = "unverified"
 
 # COSE Algorithms registry: the hash algorithms this reference implements.
 HASH_ALGS = {
@@ -49,7 +49,8 @@ HASH_ALGS = {
     -44: "sha512",
 }
 
-# Applicable Content Types of that URI (the draft's consistency section).
+# Applicable Content Types of the encoding that URL identifies (the draft's
+# consistency section).
 CORE_DETERMINISTIC_MEDIA_TYPES = frozenset({
     "application/cbor",
     "application/cbor-seq",
@@ -391,7 +392,7 @@ def emit(value: Any, content_type: Any, *, alg: int = -7, hash_alg: int = -16,
 
 @dataclass(frozen=True)
 class Result:
-    outcome: str  # VERIFIED, FAILED or UNVERIFIED
+    outcome: str  # VERIFIED or FAILED
     reason: str
 
 
@@ -402,7 +403,8 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
 
     protected is the serialized protected header map.  Pass the preimage
     octets if the verifier holds them, or a structured value (has_value=True)
-    if it holds only that.  Signature validity is not checked here.
+    if it holds only that.  The outcome is VERIFIED or FAILED, and the reason
+    says why.  Signature validity is not checked here.
     """
     header = decode(protected)
     if not isinstance(header, Map):
@@ -411,16 +413,17 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     encoding = header.get(label)
     has_ctype = header.has(LABEL_PREIMAGE_CONTENT_TYPE)
     ctype = header.get(LABEL_PREIMAGE_CONTENT_TYPE)
-    # Only the URI the draft defines is recognized; any other value, including
+    # Only the URL the draft lists is implemented.  Any other value, including
     # the integer 1 an -00 producer writes and the text string "dtrm" an -01
-    # producer writes, is not.
+    # producer writes, is ignored, and the check is the RFC 9995 one.
     recognized = isinstance(encoding, str) and encoding in ENCODINGS
 
-    # Consistency with preimage-content-type: this check comes first.
-    if has_encoding:
+    # Consistency with preimage-content-type, for an encoding this verifier
+    # implements: this check comes first.
+    if recognized:
         if not has_ctype:
             return Result(FAILED, "content-type-absent")
-        if recognized and not content_type_matches(encoding, ctype):
+        if not content_type_matches(encoding, ctype):
             return Result(FAILED, "content-type-mismatch")
 
     hash_alg = header.get(LABEL_PAYLOAD_HASH_ALG)
@@ -429,23 +432,25 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     # RFC 9995 Section 5.3: a held preimage needs no encoding information.
     if preimage is not None:
         if hash_name is None:
-            return Result(UNVERIFIED, "hash-alg-not-implemented")
+            return Result(FAILED, "hash-alg-not-implemented")
         if hashlib.new(hash_name, preimage).digest() == payload:
             return Result(VERIFIED, "preimage-digest-match")
         return Result(FAILED, "preimage-digest-mismatch")
 
+    # Without the preimage, only an encoding this verifier implements can
+    # re-create it; otherwise the RFC 9995 check has nothing to hash.
     if not has_value:
-        return Result(UNVERIFIED, "no-content")
+        return Result(FAILED, "no-content")
     if not has_encoding:
-        return Result(UNVERIFIED, "encoding-absent")
+        return Result(FAILED, "encoding-absent")
     if not recognized:
-        return Result(UNVERIFIED, "encoding-not-implemented")
+        return Result(FAILED, "encoding-not-implemented")
     if hash_name is None:
-        return Result(UNVERIFIED, "hash-alg-not-implemented")
+        return Result(FAILED, "hash-alg-not-implemented")
     try:
         recreated = ENCODINGS[encoding](value)
     except EncodeError:
-        return Result(UNVERIFIED, "value-not-encodable")
+        return Result(FAILED, "value-not-encodable")
     if hashlib.new(hash_name, recreated).digest() == payload:
         return Result(VERIFIED, "recreated-digest-match")
     return Result(FAILED, "recreated-digest-mismatch")

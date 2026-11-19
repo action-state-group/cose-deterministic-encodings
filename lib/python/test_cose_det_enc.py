@@ -66,28 +66,28 @@ class Vectors(unittest.TestCase):
 
     def test_every_outcome_is_covered(self):
         outcomes = {v["expected"]["outcome"] for v in VECTORS["verify"]}
-        self.assertEqual(outcomes, {c.VERIFIED, c.FAILED, c.UNVERIFIED})
+        self.assertEqual(outcomes, {c.VERIFIED, c.FAILED})
 
 
 class Producer(unittest.TestCase):
     def test_refuses_json_pairing(self):
-        # Consistency with preimage-content-type: a producer MUST NOT pair the CBOR URI with application/json.
+        # Consistency with preimage-content-type: a producer MUST NOT pair the CBOR URL with application/json.
         with self.assertRaises(ValueError):
             c.emit({"a": 1}, "application/json")
 
-    def test_header_value_is_the_uri(self):
+    def test_header_value_is_the_url(self):
         e = c.emit({"a": 1}, "application/cbor")
         self.assertEqual(c.decode(e.protected).get(c.LABEL_DETERMINISTIC_ENCODINGS),
                          c.CORE_DETERMINISTIC)
 
-    def test_uri_matches_draft_text(self):
-        # The URI is read from the draft, where it is shown on two lines.
+    def test_url_matches_draft_text(self):
+        # The URL is read from the draft, where it is shown on two lines.
         m = re.search(r"no line\s+break or space between them:\s+~~~\n(\S+)\n(\S+)\n~~~", DRAFT)
-        self.assertIsNotNone(m, "URI block not found in the draft")
+        self.assertIsNotNone(m, "URL block not found in the draft")
         self.assertEqual(m.group(1) + m.group(2), c.CORE_DETERMINISTIC)
 
     def test_dtrm_text_not_recognized(self):
-        # The text string "dtrm" an -01 producer writes is not the URI.
+        # The text string "dtrm" an -01 producer writes is not the URL.
         self.assertFalse(c.content_type_matches("dtrm", "application/cbor"))
 
 
@@ -134,11 +134,11 @@ class NaN(unittest.TestCase):
                 c.encode_core_deterministic(_f64(bits))
 
     def test_verifier_holding_non_trivial_nan(self):
-        # The value cannot be re-encoded: unverified, not failed.
+        # The value cannot be re-encoded: the check fails.
         ok = c.emit({"a": 1}, "application/cbor")
         got = c.verify(ok.protected, ok.payload, value=c.decode(bytes.fromhex("a16178f97e01")),
                        has_value=True)
-        self.assertEqual((got.outcome, got.reason), (c.UNVERIFIED, "value-not-encodable"))
+        self.assertEqual((got.outcome, got.reason), (c.FAILED, "value-not-encodable"))
 
 
 class Floats(unittest.TestCase):
@@ -156,11 +156,12 @@ class Floats(unittest.TestCase):
 
 class Verifier(unittest.TestCase):
     def test_header_integer_1_not_recognized(self):
-        # The integer 1 an -00 producer writes is not "dtrm": unverified, never failed.
+        # The integer 1 an -00 producer writes is not the URL: the verifier ignores
+        # it, and holding only a value it has no preimage to hash, so the check fails.
         prot = c.encode_core_deterministic({1: -7, 258: -16, 259: "application/json",
                                             c.LABEL_DETERMINISTIC_ENCODINGS: 1})
         got = c.verify(prot, b"\x00" * 32, value={"a": 1}, has_value=True)
-        self.assertEqual((got.outcome, got.reason), (c.UNVERIFIED, "encoding-not-implemented"))
+        self.assertEqual((got.outcome, got.reason), (c.FAILED, "encoding-not-implemented"))
         self.assertFalse(c.content_type_matches(1, "application/cbor"))
 
 

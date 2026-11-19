@@ -1,5 +1,5 @@
 {
-  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it. Each 'reject' value holds a NaN other than 0xf97e00. draft-ietf-cbor-serialization-13 Section 4.1 lets an encoder reject such a NaN or encode it as 0xf97e00. The reference implementations reject it; the 'reject' vectors and 'verify-value-nan-payload' follow that choice.",
+  "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header label 271 is the value the draft suggests for TBD_1; it is not assigned. 'protected' is the serialized protected header map. A verifier holding 'value_cbor' decodes it and re-creates the preimage; one holding 'preimage' hashes it. Each check is 'verified' or 'failed', with a reason code. Each 'reject' value holds a NaN other than 0xf97e00. draft-ietf-cbor-serialization-13 Section 4.1 lets an encoder reject such a NaN or encode it as 0xf97e00. The reference implementations reject it; the 'reject' vectors and 'verify-value-nan-payload' follow that choice.",
   "header_label": 271,
   "emit": [
     {
@@ -179,7 +179,7 @@
     },
     {
       "id": "verify-value",
-      "description": "Holds only the structured value; re-creates the preimage with the encoding the URI identifies",
+      "description": "Holds only the structured value; re-creates the preimage with the encoding the URL identifies",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
@@ -212,12 +212,12 @@
     },
     {
       "id": "verify-value-no-encoding",
-      "description": "Holds only the value; the header does not identify the encoding",
+      "description": "Holds only the value; the header does not identify the encoding, so the check is the RFC 9995 one, with no preimage to hash: it fails",
       "protected": "a301261901022f190103706170706c69636174696f6e2f63626f72",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "encoding-absent"
       }
     },
@@ -234,51 +234,51 @@
     },
     {
       "id": "verify-value-unknown-encoding",
-      "description": "Holds only the value; the encoding value is one the verifier does not implement",
+      "description": "Holds only the value; the encoding value is one the verifier does not implement, so it is ignored, and with no preimage to hash the check fails",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f1863",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "encoding-not-implemented"
       }
     },
     {
       "id": "verify-value-integer-1",
-      "description": "Holds only the value; the header carries the integer 1 an -00 producer writes, which is not \"dtrm\"",
+      "description": "Holds only the value; the header carries the integer 1 an -00 producer writes, which is not the URL and is ignored",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f01",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "encoding-not-implemented"
       }
     },
     {
       "id": "verify-value-dtrm-text",
-      "description": "Holds only the value; the header carries the text string \"dtrm\" an -01 producer writes, which is not the URI",
+      "description": "Holds only the value; the header carries the text string \"dtrm\" an -01 producer writes, which is not the URL and is ignored",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f646474726d",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "encoding-not-implemented"
       }
     },
     {
-      "id": "verify-value-other-uri-json",
-      "description": "Holds only a JSON value's decoded form; the header carries a URI this document does not define, with application/json",
+      "id": "verify-value-other-url-json",
+      "description": "Holds only a JSON value's decoded form; the header carries a URL this document does not list, with application/json, which a verifier that does not implement it ignores",
       "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f782768747470733a2f2f6a736f6e2d737065632e6578616d706c652f64657465726d696e6973746963",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "encoding-not-implemented"
       }
     },
     {
-      "id": "verify-preimage-other-uri-json",
-      "description": "Holds the preimage; a URI this document does not define does not prevent the RFC 9995 check",
+      "id": "verify-preimage-other-url-json",
+      "description": "Holds the preimage; a URL this document does not list is ignored, and the RFC 9995 check passes",
       "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f782768747470733a2f2f6a736f6e2d737065632e6578616d706c652f64657465726d696e6973746963",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "preimage": "a2616101616202",
@@ -289,18 +289,18 @@
     },
     {
       "id": "verify-value-nan-payload",
-      "description": "Holds only a value whose NaN has a non-zero payload (0xf97e01). An encoder that rejects such a NaN cannot re-create a preimage; the payload is the digest of the same map with 0xf97e00",
+      "description": "Holds only a value whose NaN has a non-zero payload (0xf97e01). An encoder that rejects such a NaN cannot re-create a preimage, and the check fails; the payload is the digest of the same map with 0xf97e00",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "b4c7e97b7fdae5bfcdad4c1c4008c1564ef4390303506e3979ced92ab47c8b76",
       "value_cbor": "a16178f97e01",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "value-not-encodable"
       }
     },
     {
       "id": "verify-preimage-unknown-encoding",
-      "description": "Holds the preimage; an unknown encoding value does not prevent the RFC 9995 check",
+      "description": "Holds the preimage; an encoding value the verifier does not implement is ignored, and the RFC 9995 check passes",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f1863",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "preimage": "a2616101616202",
@@ -311,17 +311,17 @@
     },
     {
       "id": "verify-nothing-held",
-      "description": "Holds neither the preimage nor the value",
+      "description": "Holds neither the preimage nor the value: the check fails",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "no-content"
       }
     },
     {
       "id": "verify-ctype-absent",
-      "description": "The encoding parameter without 259 fails before any recomputation, even with a matching preimage",
+      "description": "The CBOR URL without 259 fails before any recomputation, even with a matching preimage",
       "protected": "a301261901022f19010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "preimage": "a2616101616202",
@@ -332,7 +332,7 @@
     },
     {
       "id": "verify-ctype-absent-value",
-      "description": "The encoding parameter without 259, holding the value",
+      "description": "The CBOR URL without 259, holding the value",
       "protected": "a301261901022f19010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "value_cbor": "a2616202616101",
@@ -343,7 +343,7 @@
     },
     {
       "id": "verify-ctype-json",
-      "description": "The CBOR URI paired with application/json (the draft's own example of a violation)",
+      "description": "The CBOR URL paired with application/json (the draft's own example of a violation)",
       "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "preimage": "a2616101616202",
@@ -420,8 +420,19 @@
     },
     {
       "id": "verify-ctype-unknown-encoding-json",
-      "description": "An encoding value the verifier does not recognize is not checked against 259",
+      "description": "An encoding value the verifier does not implement is ignored, including the check against 259",
       "protected": "a401261901022f190103706170706c69636174696f6e2f6a736f6e19010f1863",
+      "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
+      "preimage": "a2616101616202",
+      "expected": {
+        "outcome": "verified",
+        "reason": "preimage-digest-match"
+      }
+    },
+    {
+      "id": "verify-ctype-absent-other-url",
+      "description": "A URL the verifier does not implement is ignored even without 259; holding the preimage, the RFC 9995 check passes",
+      "protected": "a301261901022f19010f782768747470733a2f2f6a736f6e2d737065632e6578616d706c652f64657465726d696e6973746963",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "preimage": "a2616101616202",
       "expected": {
@@ -442,7 +453,7 @@
     },
     {
       "id": "verify-binary64-hashed",
-      "description": "The producer hashed binary64 floats (another encoding) but claimed the CBOR URI",
+      "description": "The producer hashed binary64 floats (another encoding) but claimed the CBOR URL",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "daf2cb80c76c789a6ef57296c4550ce1b4b87c2c7c43a6d9a39f774d9c747b55",
       "value_cbor": "a16178fb3ff8000000000000",
@@ -453,7 +464,7 @@
     },
     {
       "id": "verify-length-first-hashed",
-      "description": "The producer hashed length-first key order (RFC 8949 Section 4.2.3) but claimed the CBOR URI",
+      "description": "The producer hashed length-first key order (RFC 8949 Section 4.2.3) but claimed the CBOR URL",
       "protected": "a401261901022f190103706170706c69636174696f6e2f63626f7219010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "daef156bfc07d5276566d45eaf893a8fef5999254f45be41336b01b688a3e65b",
       "value_cbor": "a26161021903e801",
@@ -486,12 +497,12 @@
     },
     {
       "id": "verify-hash-alg-unknown",
-      "description": "A payload-hash-alg the verifier does not implement",
+      "description": "A payload-hash-alg the verifier does not implement: the check fails",
       "protected": "a401261901023903e6190103706170706c69636174696f6e2f63626f7219010f785068747470733a2f2f64617461747261636b65722e696574662e6f72672f646f632f68746d6c2f64726166742d696574662d63626f722d73657269616c697a6174696f6e2d31332373656374696f6e2d35",
       "payload": "a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3",
       "preimage": "a2616101616202",
       "expected": {
-        "outcome": "unverified",
+        "outcome": "failed",
         "reason": "hash-alg-not-implemented"
       }
     }

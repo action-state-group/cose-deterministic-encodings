@@ -7,8 +7,8 @@
 // It builds the protected header and payload of a COSE Hash Envelope (RFC
 // 9995) whose preimage is a structured value encoded under the Core
 // Deterministic Encoding Requirements (RFC 8949 Section 4.2.1), and checks a
-// content binding, reporting verified, failed or unverified as the draft's
-// "Producer and Verifier Behavior" section specifies. Signing is out of scope.
+// content binding, reporting verified or failed as the draft's "Producer and
+// Verifier Behavior" section specifies. Signing is out of scope.
 //
 // The header label is TBD_1 in the draft; 271 is the value it suggests to
 // IANA and is the default here. It is not an assigned value.
@@ -37,18 +37,18 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is the one value the draft defines: the URI of
+// CoreDeterministic is the one URL the draft lists: the URL of
 // deterministic serialization (Section 5, the serialization named "dtrm") of
 // draft-ietf-cbor-serialization, version 13. It is compared as a string and
 // never dereferenced.
 const CoreDeterministic = "https://datatracker.ietf.org/doc/html/" +
 	"draft-ietf-cbor-serialization-13#section-5"
 
-// Content-binding outcomes.
+// Content-binding outcomes: the check succeeds or fails, and the draft adds
+// no other outcome.
 const (
-	Verified   = "verified"
-	Failed     = "failed"
-	Unverified = "unverified"
+	Verified = "verified"
+	Failed   = "failed"
 )
 
 // The structured value model. A decoded data item is one of: Int, []byte,
@@ -673,18 +673,19 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	}
 	encRaw, hasEncoding := header.Get(label)
 	ctype, hasCtype := header.Get(LabelPreimageContentType)
-	// Only the URI the draft defines is recognized; any other value, including
+	// Only the URL the draft lists is implemented. Any other value, including
 	// the integer 1 an -00 producer writes and the text string "dtrm" an -01
-	// producer writes, is not.
+	// producer writes, is ignored, and the check is the RFC 9995 one.
 	enc, isText := encRaw.(string)
 	recognized := hasEncoding && isText && enc == CoreDeterministic
 
-	// Consistency with preimage-content-type: this check comes first.
-	if hasEncoding {
+	// Consistency with preimage-content-type, for an encoding this verifier
+	// implements: this check comes first.
+	if recognized {
 		if !hasCtype {
 			return Result{Failed, "content-type-absent"}, nil
 		}
-		if recognized && !ContentTypeMatches(enc, ctype) {
+		if !ContentTypeMatches(enc, ctype) {
 			return Result{Failed, "content-type-mismatch"}, nil
 		}
 	}
@@ -696,28 +697,30 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	// RFC 9995 Section 5.3: a held preimage needs no encoding information.
 	if held.Preimage != nil {
 		if !implemented {
-			return Result{Unverified, "hash-alg-not-implemented"}, nil
+			return Result{Failed, "hash-alg-not-implemented"}, nil
 		}
 		if bytes.Equal(digest(hashAlg, held.Preimage), payload) {
 			return Result{Verified, "preimage-digest-match"}, nil
 		}
 		return Result{Failed, "preimage-digest-mismatch"}, nil
 	}
+	// Without the preimage, only an encoding this verifier implements can
+	// re-create it; otherwise the RFC 9995 check has nothing to hash.
 	if !held.HasValue {
-		return Result{Unverified, "no-content"}, nil
+		return Result{Failed, "no-content"}, nil
 	}
 	if !hasEncoding {
-		return Result{Unverified, "encoding-absent"}, nil
+		return Result{Failed, "encoding-absent"}, nil
 	}
 	if !recognized {
-		return Result{Unverified, "encoding-not-implemented"}, nil
+		return Result{Failed, "encoding-not-implemented"}, nil
 	}
 	if !implemented {
-		return Result{Unverified, "hash-alg-not-implemented"}, nil
+		return Result{Failed, "hash-alg-not-implemented"}, nil
 	}
 	pre, err := EncodeCoreDeterministic(held.Value)
 	if err != nil {
-		return Result{Unverified, "value-not-encodable"}, nil
+		return Result{Failed, "value-not-encodable"}, nil
 	}
 	if bytes.Equal(digest(hashAlg, pre), payload) {
 		return Result{Verified, "recreated-digest-match"}, nil
