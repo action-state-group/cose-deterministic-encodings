@@ -147,7 +147,7 @@ func TestVerifyVectors(t *testing.T) {
 
 // The draft's example digest, read from the draft text.
 func TestDraftExample(t *testing.T) {
-	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-01.md")
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-02.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestDecoderRejects(t *testing.T) {
 
 func TestProducerRefusesJSON(t *testing.T) {
 	if _, err := Emit(Map{{"a", I(1)}}, "application/json", -7, -16, LabelDeterministicEncodings); err == nil {
-		t.Fatal("emitted \"dtrm\" with application/json")
+		t.Fatal("emitted the CBOR URL with application/json")
 	}
 }
 
@@ -208,12 +208,28 @@ func TestHeaderValueIsTextString(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := h.(Map).Get(LabelDeterministicEncodings); got != "dtrm" {
-		t.Fatalf("header value %#v, want \"dtrm\"", got)
+	if got, _ := h.(Map).Get(LabelDeterministicEncodings); got != CoreDeterministic {
+		t.Fatalf("header value %#v, want %q", got, CoreDeterministic)
 	}
 }
 
-// The integer 1 an -00 producer writes is not "dtrm": unverified, never failed.
+// The URL is read from the draft, where it is shown on two lines.
+func TestURLMatchesDraftText(t *testing.T) {
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-02.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile("The URL is:\\s+~~~\n(\\S+)\n~~~").FindSubmatch(src)
+	if m == nil {
+		t.Fatal("URL block not found in the draft")
+	}
+	if got := string(m[1]); got != CoreDeterministic {
+		t.Fatalf("draft URL %q, code %q", got, CoreDeterministic)
+	}
+}
+
+// The integer 1 an -00 producer writes is not the URL: the verifier ignores it,
+// and holding only a value it has no preimage to hash, so the check fails.
 func TestHeaderInteger1NotRecognized(t *testing.T) {
 	prot, err := EncodeCoreDeterministic(Map{
 		{I(LabelAlg), I(-7)}, {I(LabelPayloadHashAlg), I(-16)},
@@ -226,12 +242,12 @@ func TestHeaderInteger1NotRecognized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != (Result{Unverified, "encoding-not-implemented"}) {
+	if got != (Result{Failed, "encoding-not-implemented"}) {
 		t.Fatalf("got %v", got)
 	}
 }
 
-// "dtrm" emits one NaN, 0xf97e00; the vectors emit-nan and emit-nan-binary64,
+// This reference emits one NaN, 0xf97e00; the vectors emit-nan and emit-nan-binary64,
 // plus the binary32 form.
 func TestOneNaNEmitted(t *testing.T) {
 	for _, given := range []string{"a16178f97e00", "a16178fa7fc00000", "a16178fb7ff8000000000000"} {
@@ -300,7 +316,7 @@ func TestFloatNaNByBitPattern(t *testing.T) {
 }
 
 // A verifier holding a value with a non-trivial NaN cannot re-encode it:
-// unverified, not failed.
+// the check fails.
 func TestVerifierHoldingNonTrivialNaN(t *testing.T) {
 	e, err := Emit(Map{{"a", I(1)}}, "application/cbor", -7, -16, LabelDeterministicEncodings)
 	if err != nil {
@@ -311,7 +327,7 @@ func TestVerifierHoldingNonTrivialNaN(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := Verify(e.Protected, e.Payload, Held{Value: val, HasValue: true}, LabelDeterministicEncodings)
-	if err != nil || got != (Result{Unverified, "value-not-encodable"}) {
+	if err != nil || got != (Result{Failed, "value-not-encodable"}) {
 		t.Fatalf("got %v, %v", got, err)
 	}
 }

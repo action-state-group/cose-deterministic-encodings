@@ -1,8 +1,8 @@
 ---
 title: "Deterministic Encodings for COSE"
 abbrev: "COSE Deterministic Encodings"
-docname: draft-mih-sokolov-cose-deterministic-encodings-01
-date: 2026-11-15
+docname: draft-mih-sokolov-cose-deterministic-encodings-02
+date: 2026-11-20
 category: std
 submissiontype: IETF
 ipr: trust200902
@@ -35,13 +35,17 @@ normative:
   RFC8126:
   RFC8610:
   RFC8742:
+  RFC3986:
+  RFC9110:
   RFC8949:
   RFC9052:
   RFC9995:
 
 informative:
-  RFC9393:
   I-D.ietf-cbor-serialization:
+  RFC3275:
+  RFC9393:
+  RFC9711:
   DAG-CBOR:
     title: "Specification: DAG-CBOR"
     target: https://ipld.io/specs/codecs/dag-cbor/spec/
@@ -55,12 +59,17 @@ A COSE Hash Envelope signs the digest of a preimage, not the preimage
 itself. When the preimage is the encoding of a structured value, such as a
 CBOR data item, and a verifier holds that value but not the bytes that were
 hashed, the verifier has to encode the value again, and the digest matches
-only if it applies the same deterministic encoding as the producer. RFC 8949 describes more than one such encoding for the same
-content type, and the preimage content type does not identify which one was
-applied. This document defines a COSE Hash Envelope protected-header
-parameter that identifies the encoding, and one value for CBOR content, the
-text string "dtrm", which states that the Core Deterministic Encoding
-Requirements of RFC 8949 were applied.
+only if it applies the same deterministic encoding as the producer. CBOR
+permits more than one encoding of the same data item, and the preimage
+content type does not identify the encoding that was applied. This
+document defines a COSE Hash Envelope protected-header
+parameter that identifies the encoding by a URL, and lists one URL, for
+CBOR content: the URL of the RFC Editor's information page for RFC 8949,
+which stands for the Core Deterministic Encoding Requirements of that
+document. Other specifications can identify their encodings by URLs of
+their own. A
+verifier that does not implement the identified encoding ignores the
+parameter.
 
 --- note_Note_to_Readers
 
@@ -107,20 +116,33 @@ Envelope preimage, whose content type the application chooses, COSE fixes
 no encoding.
 
 Re-encoding reproduces the preimage only if the verifier applies the
-encoding the producer applied, and {{RFC8949}} describes more than one.
-Section 4.2.1 sorts map keys bytewise, while Section 4.2.3 keeps the
-length-first order of the earlier CBOR specification for protocols that need
-to be compatible with that order: `{1000: 1, "a": 2}` is
-`a2 19 03 e8 01 61 61 02` under the former and `a2 61 61 02 19 03 e8 01`
-under the latter. The preimage-content-type (259) names the type of the content, such as
-application/swid+cbor, not the encoding applied to it, so a verifier that
-guesses the encoding cannot tell a modified value from one encoded under a
-different rule.
+encoding the producer applied. CBOR permits more than one encoding of the
+same data item ({{RFC8949}} Section 4.2), and a producer need not apply a
+deterministic one: `{"x": 1.5}` is `a1 61 78 f9 3e 00` under the Core
+Deterministic Encoding Requirements ({{RFC8949}} Section 4.2.1) and
+`a1 61 78 fb 3f f8 00 00 00 00 00 00` when every
+floating-point value is written as binary64, and both are valid CBOR. The
+preimage-content-type (259) names the type of the content, such as
+application/swid+cbor, not the encoding applied to it. A verifier that
+assumes an encoding the producer did not state cannot tell a modified
+value from one encoded another way. The parameter lets the verifier tell
+the two apart: when the producer states the encoding, a mismatch means the
+value differs. When it does not, nothing changes: the verifier checks the
+content binding as {{RFC9995}} Section 5.3 describes ({{verification}}).
 
 This document defines one protected-header parameter,
-deterministic-encodings, which identifies that encoding, and one value for
-CBOR content, the text string "dtrm", the identifier the CBOR working group
-defines for deterministic serialization ({{dtrm}}). It uses the extension point the Hash
+deterministic-encodings, which identifies that encoding by a URL, and
+lists one URL, for CBOR content: the URL of the RFC Editor's information
+page for {{RFC8949}}, which stands for the Core Deterministic Encoding
+Requirements of its Section 4.2.1 ({{cbor-value}}). Any other specification of a deterministic
+encoding can identify it by a URL of its own ({{header-param}}). This
+document defines no encoding of its own. As with the hash algorithm in
+payload-hash-alg (258), the producer states its choice and the verifier
+follows it. Naming a canonicalization or a profile by a URI has precedent:
+XML Signature names the canonicalization algorithm applied to the signed
+content by a URI ({{RFC3275}} Section 6.1), and the eat_profile claim names
+a profile, including the encoding choices it fixes, by a URI ({{RFC9711}}
+Sections 4.3.2 and 6.4). It uses the extension point the Hash
 Envelope protected header already provides ({{Section 4 of RFC9995}}:
 `* (int / tstr) => any`). The encoding is not carried as a media-type
 parameter of preimage-content-type (259). The application/cbor media type defines no
@@ -162,38 +184,20 @@ Structured value:
 
 Content binding:
 : The correspondence between content a verifier holds -- a preimage, or a
-  structured value -- and the payload of a Hash Envelope. A verifier that
-  checks a content binding reports one of three outcomes: verified, failed,
-  or unverified.
-
-Verified:
-: The digest of the preimage, held or re-created from a structured value,
+  structured value -- and the payload of a Hash Envelope. A verifier checks
+  it as {{RFC9995}} Section 5.3 describes. The check succeeds when the
+  digest of the preimage, held or re-created from a structured value,
   produced with the hash algorithm identified by payload-hash-alg (258),
   matches the payload, and the verifier found no inconsistency in the
-  protected header ({{consistency}}).
-
-Failed:
-: The verifier found the protected header inconsistent ({{consistency}}), or
-  the digest of the preimage, held or re-created from a structured value,
-  produced with the hash algorithm identified by payload-hash-alg (258),
-  does not match the payload.
-
-Unverified:
-: Neither verified nor failed. When the verifier found no inconsistency in
-  the protected header ({{consistency}}), this is the case if it holds
-  neither the preimage nor a structured value; if it holds a structured
-  value but not the preimage, and deterministic-encodings is absent or
-  carries a value the verifier does not recognize or implement, or the
-  verifier cannot produce the identified encoding of that value
-  ({{verification}}); or if it does not implement the hash algorithm
-  identified by payload-hash-alg (258).
+  protected header ({{consistency}}); otherwise it fails. This document
+  adds no other outcome.
 
 # The deterministic-encodings Header Parameter {#header-param}
 
 TBD\_1:
 : deterministic-encodings. The deterministic encoding with which a
   structured value was serialized to create the bytes that were hashed
-  (preimage) to produce the payload, given as a text string ({{dtrm}}).
+  (preimage) to produce the payload, given as a URL.
 
 It extends {{RFC9995}} by adding one optional member to the
 Hash_Envelope_Protected_Header CDDL of {{RFC9995}} Section 4, alongside the
@@ -219,19 +223,53 @@ producer MUST NOT list label TBD\_1 in the crit header parameter
 ({{RFC9052}} Section 3.1), so that a verifier that implements only
 {{RFC9995}} can ignore it.
 
-## The Value "dtrm" {#dtrm}
+The value of deterministic-encodings is a text string holding a URL: a
+URI ({{RFC3986}} Section 3) with the "https" scheme ({{RFC9110}} Section
+4.2.2) that links to the specification of the encoding, to the part of
+it that defines the encoding, or to its publisher's page about that
+specification. Anyone who specifies a deterministic
+encoding can identify it by such a URL, and is responsible for the URL,
+the encoding, and the encoding's Applicable Content Types
+({{consistency}}); no registry of these URLs is needed. A producer copies
+the URL of the encoding it applied. A verifier compares the value with the
+URLs of the encodings it implements, character by character ({{RFC3986}}
+Section 6.2.1), and does not dereference it. This document lists one URL,
+for CBOR content ({{cbor-value}}).
 
-This document defines one value of deterministic-encodings, for CBOR
-content: the text string "dtrm". It states that the structured value was
-encoded under the Core Deterministic Encoding Requirements of {{RFC8949}}
-Section 4.2.1. The name "dtrm" is the one {{I-D.ietf-cbor-serialization}}
-(Section 8) gives to its deterministic serialization (Section 5), which is
-{{RFC8949}} Section 4.2.1 except for NaNs: "dtrm" excludes non-trivial NaNs,
-as the CBOR working group defines it (Sections 4.1 and 5.1, and
-Appendix B.5, of {{I-D.ietf-cbor-serialization}}). For a CBOR sequence {{RFC8742}}, each data item is
-encoded according to these requirements. Apart from that rule for NaNs, the
-choices that {{RFC8949}} Section 4.2.2 leaves to a protocol are not part of
-"dtrm" ({{security}}).
+## The URL for CBOR Content {#cbor-value}
+
+For CBOR content, this document lists one URL: the URL of the RFC
+Editor's information page for {{RFC8949}}, which gives the status of that
+RFC, its errata, and its formats, in the form that {{RFC8949}} itself
+gives. The URL is:
+
+~~~
+https://www.rfc-editor.org/info/rfc8949
+~~~
+
+As the value of deterministic-encodings, the URL states that the
+structured value was encoded according to the Core Deterministic Encoding
+Requirements of {{RFC8949}} Section 4.2.1. It does not stand for the other
+encodings that {{RFC8949}} describes, such as the length-first map key
+ordering of its Section 4.2.3. For a CBOR sequence {{RFC8742}}, each data
+item is encoded according to these requirements. The choices that
+{{RFC8949}} Section 4.2.2 leaves to a protocol, including the
+representation of NaN values, are not part of this encoding
+({{security}}).
+
+An RFC does not change once it is published, so the URL names one fixed
+text. A later specification that changes deterministic encoding has a URL
+of its own -- for example, {{I-D.ietf-cbor-serialization}}, whose
+deterministic serialization excludes NaNs other than 0xf97e00 -- and
+Hash Envelopes that carry this URL keep their meaning.
+
+The URL is listed so that producers and verifiers of CBOR content use the
+same string: a verifier compares URLs character by character
+({{header-param}}), so another URL for the same text, such as the same URL
+with a final "/" or one at another host, is a different value. Other URLs, for other encodings of
+CBOR or for encodings of other content such as JSON, are the
+responsibility of the specifications they link to ({{header-param}}); this
+document does not list them.
 
 # Producer and Verifier Behavior {#behavior}
 
@@ -249,7 +287,9 @@ then be checked only from the preimage bytes.
 
 ## Consistency with preimage-content-type {#consistency}
 
-The Applicable Content Types of "dtrm" are application/cbor,
+The Applicable Content Types of the encoding that the URL in {{cbor-value}}
+identifies are
+application/cbor,
 application/cbor-seq, application/cose, application/cose-key,
 application/cose-key-set, application/cose-x509, application/cwt, and
 application/multipart-core, and media types with
@@ -268,15 +308,15 @@ the encoding that deterministic-encodings identifies:
   a matching media type with no content coding.
 
 A producer MUST NOT emit a Hash Envelope that violates these rules -- for
-example, one pairing "dtrm" with application/json. A verifier
-that finds deterministic-encodings present with preimage-content-type
-(259) absent, or with a 259 value that does not match the Applicable Content
-Types of an encoding the verifier recognizes, MUST report the content
-binding as failed, without attempting recomputation. This check comes
-first, and takes precedence over {{verification}}. This outcome applies only
-to Hash Envelopes that carry deterministic-encodings; a verifier that
-implements only {{RFC9995}} ignores the parameter, and its results are
-unchanged.
+example, one pairing the URL listed in {{cbor-value}} with
+application/json. A verifier that implements the encoding that
+deterministic-encodings identifies, and finds preimage-content-type (259)
+absent or with a value that does not match the Applicable Content Types of
+that encoding, MUST treat the check of the content binding as failed,
+without attempting recomputation. This check comes first, and takes
+precedence over {{verification}}. A verifier that does not implement the
+identified encoding, like one that implements only {{RFC9995}}, ignores
+the parameter, and its results are unchanged.
 
 ## Verifying the Content Binding {#verification}
 
@@ -289,21 +329,26 @@ is present, subject to {{consistency}}.
 
 A verifier that holds only a structured value -- for example, content it
 received, stored, or decoded in a form other than the preimage itself --
-has to re-create the preimage by encoding that value, and needs
-deterministic-encodings to do so. Such a verifier MUST encode the value
-with the encoding that deterministic-encodings identifies, and MUST NOT infer the encoding
-from preimage-content-type (259) or from the structure of the value. If
-deterministic-encodings is absent, or carries a value the verifier does
-not recognize or implement, the verifier cannot re-create the preimage: it
-MUST NOT report the content binding as verified, and MUST report it as
-unverified rather than as failed. The same applies when the verifier
-cannot produce the identified encoding of the structured value -- for
-example, when its encoder rejects a NaN that "dtrm" excludes ({{dtrm}}).
+has to re-create the preimage by encoding that value. When
+deterministic-encodings identifies an encoding the verifier implements,
+the verifier MUST encode the value with that encoding, and MUST NOT infer
+the encoding from preimage-content-type (259) or from the structure of the
+value. If the digest of the result does not match the payload, the check
+fails. It also fails if the verifier cannot produce that encoding of the
+value -- for example, when the value holds a NaN with a payload that its
+encoder does not support ({{cbor-value}}).
+
+When deterministic-encodings is absent, or its value is not the URL of an
+encoding the verifier implements -- for example, a URL that this document
+does not list, or a value that is not a text string -- the verifier
+ignores the parameter, and checks the content binding as it would for a
+Hash Envelope without it, as {{RFC9995}} Section 5.3 describes. This
+document adds no other outcome.
 
 A Hash Envelope produced without this parameter -- including any produced
 before the parameter was registered -- is not defective: its content binding
 can still be verified from the preimage bytes. Signature validity is
-unaffected by any content-binding outcome: a verifier that has not
+unaffected by the check of the content binding: a verifier that has not
 established the content binding can still validate the signature of the
 COSE_Sign1 as specified in {{RFC9052}}.
 
@@ -324,7 +369,8 @@ key order, placing "a" before "b"), gives the 7-octet preimage
     / alg                     / 1: -7, # ES256
     / hash algorithm          / 258: -16, # sha-256
     / preimage type           / 259: "application/cbor",
-    / deterministic encodings / TBD_1: "dtrm",
+    / deterministic encodings / TBD_1:
+        "https://www.rfc-editor.org/info/rfc8949",
   }>>
   / unprotected / {},
   / payload     / h'a0d3af9e...c893b5e3', # digest above
@@ -337,9 +383,19 @@ Identification (CoSWID) tags but does not require a deterministic encoding of
 them, so two producers may serialize the same tag as different byte
 sequences. A producer that applies the Core Deterministic Encoding
 Requirements before hashing a CoSWID tag sets preimage-content-type (259) to
-application/swid+cbor and deterministic-encodings to "dtrm" -- recording
+application/swid+cbor and deterministic-encodings to the URL listed in
+{{cbor-value}} -- recording
 its own choice, not a CoSWID requirement -- so that a
 verifier holding the decoded tag knows how to re-create the preimage.
+
+A Hash Envelope over JSON content can carry deterministic-encodings with
+the URL of a specification that defines a deterministic encoding of JSON,
+such as "https://json-spec.example/deterministic", with
+preimage-content-type "application/json". This document does not list
+that URL. A verifier that implements that encoding and holds the decoded
+JSON value re-creates the preimage with it. A verifier that does not
+implement it ignores the parameter, and checks the content binding as
+{{RFC9995}} Section 5.3 describes ({{verification}}).
 
 # Security Considerations {#security}
 
@@ -356,12 +412,20 @@ tag. Choices that decide which data item represents a value, such as those
 versus floating-point values, belong to the structured value, not to
 the encoding that deterministic-encodings identifies. A choice that changes only how the same
 data item is serialized, such as encoding every floating-point value as binary64, is a different
-encoding, not "dtrm". A producer that re-reads stored content before hashing
+encoding, not the one that the URL in {{cbor-value}}
+identifies. A producer that re-reads
+stored content before hashing
 MUST ensure the preimage it hashes is byte-identical to the encoding's own
 output. A verifier that re-creates a preimage from a structured value
 ({{verification}}) needs that value exactly as the producer encoded it;
-otherwise its recomputed digest can differ from the payload, and the content
-binding is then reported as failed.
+otherwise its recomputed digest can differ from the payload, and the check
+of the content binding then fails.
+
+A verifier does not dereference the URL in deterministic-encodings, so
+the value causes no network access, and a URL whose resource has moved or
+changed does not change the verifier's result. A URL of an encoding the
+verifier does not implement has no effect on the result
+({{verification}}).
 
 # Privacy Considerations {#privacy}
 
@@ -391,14 +455,52 @@ registry as of 2026-11-14.
 
 --- back
 
+# Changes from Version 01
+{:removeinrfc}
+
+* The value of deterministic-encodings is a URL, not a token: an "https"
+  URL that links to the specification of the encoding ({{header-param}}).
+  Version 01 used the text string "dtrm", the name
+  {{I-D.ietf-cbor-serialization}} gives to deterministic serialization in
+  its CDDL control operator. A URL needs no registry: whoever specifies an
+  encoding identifies it by a URL and is responsible for it.
+
+* This document lists one URL, for CBOR content: the URL of the RFC
+  Editor's information page for {{RFC8949}}, which stands for the Core
+  Deterministic Encoding Requirements of its Section 4.2.1
+  ({{cbor-value}}). An RFC does not change, so the URL needs no
+  replacement later. Unlike "dtrm", this encoding does not exclude NaNs
+  other than 0xf97e00: the representation of NaN values is one of the
+  choices that {{RFC8949}} Section 4.2.2 leaves to a protocol.
+
+* The outcome "unverified" is removed: the check of a content binding
+  succeeds or fails, as {{RFC9995}} Section 5.3 describes it. A verifier
+  ignores deterministic-encodings when it is absent or its value is not
+  the URL of an encoding the verifier implements, including the text
+  string "dtrm", and checks the content binding as for a Hash Envelope
+  without it. When a verifier cannot produce the identified encoding of a
+  structured value, the check fails. Only a verifier that implements the
+  identified encoding checks preimage-content-type (259) against it
+  ({{consistency}}, {{verification}}).
+
+* Examples show the URL and a JSON case with a URL that this document does
+  not list ({{examples}}); Security Considerations state that the URL is
+  not dereferenced ({{security}}).
+
+* The abstract and the introduction no longer rest on RFC 8949 describing
+  more than one deterministic encoding. The introduction shows instead a
+  value that has two valid CBOR encodings, one of them deterministic, and
+  why stating the encoding lets a verifier tell a modified value from one
+  encoded another way ({{intro}}).
+
 # Changes from Version 00
 {:removeinrfc}
 
 * The "COSE Deterministic Encodings" registry is removed. This document
   requests only the registration of the header parameter ({{iana}}).
 
-* The value of deterministic-encodings is the text string "dtrm"
-  ({{dtrm}}), the name {{I-D.ietf-cbor-serialization}} gives to its
+* The value of deterministic-encodings became the text string "dtrm",
+  the name {{I-D.ietf-cbor-serialization}} gives to its
   deterministic serialization. Version 00 used the integer 1, the value its
   registry assigned to core-deterministic. A verifier of this version
   handles the integer 1 as a value it does not recognize
