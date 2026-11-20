@@ -29,13 +29,10 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-# The one URL the draft lists: the URL of deterministic serialization
-# (Section 5, the serialization named "dtrm") of draft-ietf-cbor-serialization,
-# version 13.  It is compared as a string and never dereferenced.
-CORE_DETERMINISTIC = (
-    "https://datatracker.ietf.org/doc/html/"
-    "draft-ietf-cbor-serialization-13#section-5"
-)
+# The one URL the draft lists: the RFC Editor's information page for RFC 8949,
+# which stands for the Core Deterministic Encoding Requirements of RFC 8949
+# Section 4.2.1.  It is compared as a string and never dereferenced.
+CORE_DETERMINISTIC = "https://www.rfc-editor.org/info/rfc8949"
 
 # The check of a content binding succeeds or fails; the draft adds no other
 # outcome.
@@ -104,7 +101,7 @@ class Simple:
 
 @dataclass(frozen=True)
 class NonTrivialNaN:
-    """A decoded NaN other than the one "dtrm" emits: a signaling NaN, a NaN
+    """A decoded NaN other than the one this reference emits: a signaling NaN, a NaN
     with a non-zero payload, or a NaN with the sign bit set.
 
     The decoder decides this from the encoded bits, because the float that
@@ -116,9 +113,10 @@ class NonTrivialNaN:
     encoded: bytes
 
 
-# The one NaN "dtrm" emits, 0xf97e00 (draft-ietf-cbor-serialization Section
-# 4.1): sign bit clear, most significant significand bit set, all remaining
-# significand bits clear.  As binary64 and as binary32 its bits are these.
+# The one NaN this reference emits, 0xf97e00: sign bit clear, most significant
+# significand bit set, all remaining significand bits clear.  RFC 8949 Section
+# 4.2.2 leaves the representation of NaN to a protocol and names 0xf97e00 as
+# the typical single choice.  As binary64 and as binary32 its bits are these.
 _QNAN_BITS64 = 0x7FF8000000000000
 _QNAN = struct.unpack(">d", _QNAN_BITS64.to_bytes(8, "big"))[0]
 _TRIVIAL_NAN_BITS = {25: 0x7E00, 26: 0x7FC00000, 27: _QNAN_BITS64}
@@ -148,12 +146,12 @@ def _float(value: float) -> bytes:
     # Preferred serialization: the shortest of binary16/32/64 that represents
     # the value exactly (RFC 8949 Section 4.2.1, by way of Section 4.1).
     if math.isnan(value):
-        # "dtrm" emits one NaN, 0xf97e00, and this reference rejects every
-        # other NaN rather than change the value it hashes.  Decided by bit
+        # This reference emits one NaN, 0xf97e00, and rejects every other NaN
+        # rather than change the value it hashes (RFC 8949 Section 4.2.2).  Decided by bit
         # pattern: a sign bit or a payload makes the float a non-trivial NaN.
         if struct.unpack(">Q", struct.pack(">d", value))[0] == _QNAN_BITS64:
             return b"\xf9\x7e\x00"
-        raise EncodeError("non-trivial NaN: \"dtrm\" emits only 0xf97e00")
+        raise EncodeError("non-trivial NaN: this reference emits only 0xf97e00")
     for fmt, ai in (("e", 25), ("f", 26)):
         try:
             packed = struct.pack(">" + fmt, value)
@@ -196,7 +194,7 @@ def encode_core_deterministic(value: Any) -> bytes:
     if isinstance(value, Tag):
         return _head(6, value.number) + encode_core_deterministic(value.value)
     if isinstance(value, NonTrivialNaN):
-        raise EncodeError("non-trivial NaN: \"dtrm\" emits only 0xf97e00")
+        raise EncodeError("non-trivial NaN: this reference emits only 0xf97e00")
     if isinstance(value, Simple):
         if 24 <= value.value <= 31 or not 0 <= value.value <= 255:
             raise EncodeError("invalid simple value")
@@ -230,7 +228,7 @@ def decode(data: bytes) -> Any:
     Integers and floating-point values stay distinct, and a map decodes to a
     Map.  A map whose keys are not all distinct is rejected.  A NaN decodes,
     by its encoded bits, to the float with bits 7ff8000000000000 when it is
-    the one NaN "dtrm" emits, and to NonTrivialNaN otherwise.
+    the one NaN this reference emits, and to NonTrivialNaN otherwise.
     """
     value, end = _decode(data, 0)
     if end != len(data):

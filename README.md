@@ -9,11 +9,9 @@ hashed bytes — so a verifier cannot reliably recompute the hash. This draft
 defines one Hash Envelope protected-header parameter
 (`deterministic-encodings`), naming the deterministic encoding a producer
 applied before hashing a Hash Envelope payload by a URL, and lists one URL, for
-CBOR content: the URL of deterministic serialization (the serialization named
-`"dtrm"`) as the CBOR working group defines it in `draft-ietf-cbor-serialization`,
-which is RFC 8949 §4.2.1 except for non-trivial NaNs. Until that document is an
-RFC, the URL names its version 13:
-`https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-13#section-5`.
+CBOR content: the RFC Editor's information page for RFC 8949,
+`https://www.rfc-editor.org/info/rfc8949`, which stands for the Core
+Deterministic Encoding Requirements of RFC 8949 §4.2.1.
 Anyone who specifies another encoding can identify it by a URL of its own and is
 responsible for it; no registry is needed. A verifier that does not implement the
 identified encoding ignores the parameter and checks the payload as RFC 9995

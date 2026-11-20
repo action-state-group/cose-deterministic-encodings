@@ -219,11 +219,11 @@ func TestURLMatchesDraftText(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := regexp.MustCompile("no line\\s+break or space between them:\\s+~~~\n(\\S+)\n(\\S+)\n~~~").FindSubmatch(src)
+	m := regexp.MustCompile("The URL is:\\s+~~~\n(\\S+)\n~~~").FindSubmatch(src)
 	if m == nil {
 		t.Fatal("URL block not found in the draft")
 	}
-	if got := string(m[1]) + string(m[2]); got != CoreDeterministic {
+	if got := string(m[1]); got != CoreDeterministic {
 		t.Fatalf("draft URL %q, code %q", got, CoreDeterministic)
 	}
 }
@@ -247,7 +247,7 @@ func TestHeaderInteger1NotRecognized(t *testing.T) {
 	}
 }
 
-// "dtrm" emits one NaN, 0xf97e00; the vectors emit-nan and emit-nan-binary64,
+// This reference emits one NaN, 0xf97e00; the vectors emit-nan and emit-nan-binary64,
 // plus the binary32 form.
 func TestOneNaNEmitted(t *testing.T) {
 	for _, given := range []string{"a16178f97e00", "a16178fa7fc00000", "a16178fb7ff8000000000000"} {

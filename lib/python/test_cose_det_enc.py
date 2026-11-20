@@ -81,10 +81,10 @@ class Producer(unittest.TestCase):
                          c.CORE_DETERMINISTIC)
 
     def test_url_matches_draft_text(self):
-        # The URL is read from the draft, where it is shown on two lines.
-        m = re.search(r"no line\s+break or space between them:\s+~~~\n(\S+)\n(\S+)\n~~~", DRAFT)
+        # The URL is read from the draft.
+        m = re.search(r"The URL is:\s+~~~\n(\S+)\n~~~", DRAFT)
         self.assertIsNotNone(m, "URL block not found in the draft")
-        self.assertEqual(m.group(1) + m.group(2), c.CORE_DETERMINISTIC)
+        self.assertEqual(m.group(1), c.CORE_DETERMINISTIC)
 
     def test_dtrm_text_not_recognized(self):
         # The text string "dtrm" an -01 producer writes is not the URL.
@@ -96,7 +96,7 @@ def _f64(bits: int) -> float:
 
 
 class NaN(unittest.TestCase):
-    # "dtrm" emits one NaN, 0xf97e00, and this reference rejects every other.
+    # This reference emits one NaN, 0xf97e00, and rejects every other.
 
     def test_one_nan_emitted(self):
         # The vectors emit-nan and emit-nan-binary64, plus the binary32 form.

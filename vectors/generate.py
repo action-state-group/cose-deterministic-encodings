@@ -147,7 +147,7 @@ def build() -> dict:
                   "application/cbor", hash_alg=-43),
         emit_case("emit-content-format", "A Content-Format number (60, application/cbor) as the "
                   "259 value", ex_value, 60),
-        emit_case("emit-nan", "{\"x\": NaN} holding the one NaN \"dtrm\" emits, 0xf97e00, "
+        emit_case("emit-nan", "{\"x\": NaN} holding the one NaN the reference emits, 0xf97e00, "
                   "emits those bytes unchanged",
                   h("a1 61 78 f9 7e 00"), "application/cbor", expect_preimage=h("a1 61 78 f9 7e 00")),
         emit_case("emit-nan-binary64", "The same NaN given as binary64 re-encodes as 0xf97e00",
@@ -292,9 +292,9 @@ def build() -> dict:
                        "verifier holding 'value_cbor' decodes it and re-creates the preimage; "
                        "one holding 'preimage' hashes it. Each check is 'verified' or "
                        "'failed', with a reason code. Each 'reject' value holds a NaN "
-                       "other than 0xf97e00. draft-ietf-cbor-serialization-13 Section 4.1 lets "
-                       "an encoder reject such a NaN or encode it as 0xf97e00. The reference "
-                       "implementations reject it; the 'reject' vectors and "
+                       "other than 0xf97e00. RFC 8949 Section 4.2.2 leaves the representation "
+                       "of NaN to a protocol and names 0xf97e00 as the typical single choice. "
+                       "The reference implementations emit only 0xf97e00 and reject other NaNs; the 'reject' vectors and "
                        "'verify-value-nan-payload' follow that choice.",
         "header_label": L,
         "emit": emit_cases,

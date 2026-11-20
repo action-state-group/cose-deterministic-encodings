@@ -37,12 +37,11 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is the one URL the draft lists: the URL of
-// deterministic serialization (Section 5, the serialization named "dtrm") of
-// draft-ietf-cbor-serialization, version 13. It is compared as a string and
-// never dereferenced.
-const CoreDeterministic = "https://datatracker.ietf.org/doc/html/" +
-	"draft-ietf-cbor-serialization-13#section-5"
+// CoreDeterministic is the one URL the draft lists: the RFC Editor's
+// information page for RFC 8949, which stands for the Core Deterministic
+// Encoding Requirements of RFC 8949 Section 4.2.1. It is compared as a string
+// and never dereferenced.
+const CoreDeterministic = "https://www.rfc-editor.org/info/rfc8949"
 
 // Content-binding outcomes: the check succeeds or fails, and the draft adds
 // no other outcome.
@@ -97,7 +96,7 @@ type Tag struct {
 // Simple is a simple value other than false, true and null.
 type Simple uint8
 
-// NonTrivialNaN is a decoded NaN other than the one "dtrm" emits: a
+// NonTrivialNaN is a decoded NaN other than the one this reference emits: a
 // signaling NaN, a NaN with a non-zero payload, or a NaN with the sign bit
 // set. It holds the data item as received (initial byte and argument).
 //
@@ -106,9 +105,10 @@ type Simple uint8
 // NaN half, and the bits of math.NaN() are 0x7FF8000000000001.
 type NonTrivialNaN []byte
 
-// qNaNBits64 is the one NaN "dtrm" emits, 0xf97e00, as binary64 bits: sign
-// bit clear, most significant significand bit set, all remaining
-// significand bits clear (draft-ietf-cbor-serialization Section 4.1).
+// qNaNBits64 is the one NaN this reference emits, 0xf97e00, as binary64
+// bits: sign bit clear, most significant significand bit set, all remaining
+// significand bits clear. RFC 8949 Section 4.2.2 leaves the representation
+// of NaN to a protocol and names 0xf97e00 as the typical single choice.
 const qNaNBits64 = 0x7ff8000000000000
 
 var (
@@ -189,14 +189,14 @@ func fromHalf(h uint16) float64 {
 
 func encodeFloat(buf *bytes.Buffer, f float64) error {
 	if math.IsNaN(f) {
-		// "dtrm" emits one NaN, 0xf97e00, and this reference rejects every
-		// other NaN rather than change the value it hashes. Decided by bit
+		// This reference emits one NaN, 0xf97e00, and rejects every other NaN
+		// rather than change the value it hashes (RFC 8949 Section 4.2.2). Decided by bit
 		// pattern: math.NaN() itself has a payload bit set and is rejected.
 		if math.Float64bits(f) == qNaNBits64 {
 			buf.Write([]byte{0xf9, 0x7e, 0x00})
 			return nil
 		}
-		return fmt.Errorf("%w: non-trivial NaN: \"dtrm\" emits only 0xf97e00", ErrEncode)
+		return fmt.Errorf("%w: non-trivial NaN: this reference emits only 0xf97e00", ErrEncode)
 	}
 	if h, ok := toHalf(f); ok {
 		buf.WriteByte(0xf9)
@@ -282,7 +282,7 @@ func encode(buf *bytes.Buffer, v any) error {
 		head(buf, 6, x.Number)
 		return encode(buf, x.Value)
 	case NonTrivialNaN:
-		return fmt.Errorf("%w: non-trivial NaN: \"dtrm\" emits only 0xf97e00", ErrEncode)
+		return fmt.Errorf("%w: non-trivial NaN: this reference emits only 0xf97e00", ErrEncode)
 	case Simple:
 		if x >= 24 && x <= 31 {
 			return fmt.Errorf("%w: reserved simple value", ErrEncode)
@@ -299,7 +299,7 @@ func encode(buf *bytes.Buffer, v any) error {
 // Decode decodes exactly one well-formed CBOR data item. Integers and floats
 // stay distinct, maps decode to Map, and duplicate map keys are rejected. A
 // NaN decodes, by its encoded bits, to the float64 with bits
-// 0x7ff8000000000000 when it is the one NaN "dtrm" emits, and to
+// 0x7ff8000000000000 when it is the one NaN this reference emits, and to
 // NonTrivialNaN otherwise.
 func Decode(data []byte) (any, error) {
 	v, n, err := decode(data, 0)
@@ -610,7 +610,7 @@ type Emitted struct {
 	Preimage, Payload, Protected []byte
 }
 
-// Emit encodes value with "dtrm", hashes it with hashAlg, and
+// Emit encodes value with the Core Deterministic Encoding, hashes it with hashAlg, and
 // builds the serialized protected header (alg, 258, 259 and label).
 func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted, error) {
 	if hasher(hashAlg) == nil {

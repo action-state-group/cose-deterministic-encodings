@@ -5,8 +5,8 @@
 COSE                                                              S. Mih
 Internet-Draft                                  Action State Group, Inc.
 Intended status: Standards Track                              A. Sokolov
-Expires: 23 May 2027                                     Tyche Institute
-                                                        19 November 2026
+Expires: 24 May 2027                                     Tyche Institute
+                                                        20 November 2026
 
 
                     Deterministic Encodings for COSE
@@ -23,11 +23,12 @@ Abstract
    same data item, and the preimage content type does not identify the
    encoding that was applied.  This document defines a COSE Hash
    Envelope protected-header parameter that identifies the encoding by a
-   URL, and lists one URL, for CBOR content: the URL of the
-   deterministic serialization that the CBOR working group defines in
-   draft-ietf-cbor-serialization.  Other specifications can identify
-   their encodings by URLs of their own.  A verifier that does not
-   implement the identified encoding ignores the parameter.
+   URL, and lists one URL, for CBOR content: the URL of the RFC Editor's
+   information page for RFC 8949, which stands for the Core
+   Deterministic Encoding Requirements of that document.  Other
+   specifications can identify their encodings by URLs of their own.  A
+   verifier that does not implement the identified encoding ignores the
+   parameter.
 
 Note to Readers
 
@@ -52,8 +53,7 @@ Status of This Memo
 
 
 
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 1]
+Mih & Sokolov              Expires 24 May 2027                  [Page 1]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
@@ -63,7 +63,7 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 May 2027.
+   This Internet-Draft will expire on 24 May 2027.
 
 Copyright Notice
 
@@ -109,7 +109,7 @@ Copyright Notice
 
 
 
-Mih & Sokolov              Expires 23 May 2027                  [Page 2]
+Mih & Sokolov              Expires 24 May 2027                  [Page 2]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
@@ -127,74 +127,51 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    encoding the producer applied.  CBOR permits more than one encoding
    of the same data item ([RFC8949] Section 4.2), and a producer need
    not apply a deterministic one: {"x": 1.5} is a1 61 78 f9 3e 00 under
-   deterministic serialization and a1 61 78 fb 3f f8 00 00 00 00 00 00
-   when every floating-point value is written as binary64, and both are
-   valid CBOR.  The preimage-content-type (259) names the type of the
-   content, such as application/swid+cbor, not the encoding applied to
-   it.  A verifier that assumes an encoding the producer did not state
-   cannot tell a modified value from one encoded another way.  The
-   parameter lets the verifier tell the two apart: when the producer
-   states the encoding, a mismatch means the value differs.  When it
-   does not, nothing changes: the verifier checks the content binding as
-   [RFC9995] Section 5.3 describes (Section 4.3).
+   the Core Deterministic Encoding Requirements ([RFC8949]
+   Section 4.2.1) and a1 61 78 fb 3f f8 00 00 00 00 00 00 when every
+   floating-point value is written as binary64, and both are valid CBOR.
+   The preimage-content-type (259) names the type of the content, such
+   as application/swid+cbor, not the encoding applied to it.  A verifier
+   that assumes an encoding the producer did not state cannot tell a
+   modified value from one encoded another way.  The parameter lets the
+   verifier tell the two apart: when the producer states the encoding, a
+   mismatch means the value differs.  When it does not, nothing changes:
+   the verifier checks the content binding as [RFC9995] Section 5.3
+   describes (Section 4.3).
+
+   This document defines one protected-header parameter, deterministic-
+   encodings, which identifies that encoding by a URL, and lists one
+   URL, for CBOR content: the URL of the RFC Editor's information page
+   for [RFC8949], which stands for the Core Deterministic Encoding
+   Requirements of its Section 4.2.1 (Section 3.1).  Any other
+   specification of a deterministic encoding can identify it by a URL of
+   its own (Section 3).  This document defines no encoding of its own.
+   As with the hash algorithm in payload-hash-alg (258), the producer
+   states its choice and the verifier follows it.  Naming a
+   canonicalization or a profile by a URI has precedent: XML Signature
+   names the canonicalization algorithm applied to the signed content by
+   a URI ([RFC3275] Section 6.1), and the eat_profile claim names a
+   profile, including the encoding choices it fixes, by a URI ([RFC9711]
+   Sections 4.3.2 and 6.4).  It uses the extension point the Hash
+   Envelope protected header already provides (Section 4 of [RFC9995]: *
+   (int / tstr) => any).  The encoding is not carried as a media-type
+   parameter of preimage-content-type (259).  The application/cbor media
+   type defines no parameters ([RFC8949] Section 9.3), so such a
+   parameter would have to be registered for every media type the
+   encoding applies to, and a CoAP Content-Format number carries only
+   the parameters fixed in its registry entry ([RFC7252] Section 12.3),
+   so each pairing of media type and encoding would also need its own
+   number.  A profile that has its own media type, such as application/
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 3]
+Mih & Sokolov              Expires 24 May 2027                  [Page 3]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
 
-   This document defines one protected-header parameter, deterministic-
-   encodings, which identifies that encoding by a URL, and lists one
-   URL, for CBOR content: the URL at which the IETF publishes the
-   definition of deterministic serialization in the CBOR working group's
-   specification (Section 3.1).  Any other specification of a
-   deterministic encoding can identify it by a URL of its own
-   (Section 3).  This document defines no encoding of its own.  As with
-   the hash algorithm in payload-hash-alg (258), the producer states its
-   choice and the verifier follows it.  Naming a canonicalization or a
-   profile by a URI has precedent: XML Signature names the
-   canonicalization algorithm applied to the signed content by a URI
-   ([RFC3275] Section 6.1), and the eat_profile claim names a profile,
-   including the encoding choices it fixes, by a URI ([RFC9711] Sections
-   4.3.2 and 6.4).  It uses the extension point the Hash Envelope
-   protected header already provides (Section 4 of [RFC9995]: * (int /
-   tstr) => any).  The encoding is not carried as a media-type parameter
-   of preimage-content-type (259).  The application/cbor media type
-   defines no parameters ([RFC8949] Section 9.3), so such a parameter
-   would have to be registered for every media type the encoding applies
-   to, and a CoAP Content-Format number carries only the parameters
-   fixed in its registry entry ([RFC7252] Section 12.3), so each pairing
-   of media type and encoding would also need its own number.  A profile
-   that has its own media type, such as application/vnd.ipld.dag-cbor
-   [DAG-CBOR], is already identified by 259; content labelled
-   application/cbor, or with an application's own type such as
+   vnd.ipld.dag-cbor [DAG-CBOR], is already identified by 259; content
+   labelled application/cbor, or with an application's own type such as
    application/swid+cbor, is not.
 
    The scope of this document is structured values, such as CBOR data
@@ -219,13 +196,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    (payload-hash-alg), 259 (preimage-content-type), and 260 (payload-
    location).
 
-
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 4]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
    This document also uses the following terms:
 
    Structured value:  A value with internal structure, such as a CBOR
@@ -247,6 +217,14 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    TBD_1:  deterministic-encodings.  The deterministic encoding with
       which a structured value was serialized to create the bytes that
       were hashed (preimage) to produce the payload, given as a URL.
+
+
+
+
+Mih & Sokolov              Expires 24 May 2027                  [Page 4]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
 
    It extends [RFC9995] by adding one optional member to the
    Hash_Envelope_Protected_Header CDDL of [RFC9995] Section 4, alongside
@@ -272,71 +250,58 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 
    The value of deterministic-encodings is a text string holding a URL:
    a URI ([RFC3986] Section 3) with the "https" scheme ([RFC9110]
-   Section 4.2.2) that links to the specification of the encoding, or to
-   the part of it that defines the encoding.  Anyone who specifies a
-
-
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 5]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
-   deterministic encoding can identify it by such a URL, and is
-   responsible for the URL, the encoding, and the encoding's Applicable
-   Content Types (Section 4.2); no registry of these URLs is needed.  A
-   producer copies the URL of the encoding it applied.  A verifier
-   compares the value with the URLs of the encodings it implements,
-   character by character ([RFC3986] Section 6.2.1), and does not
-   dereference it.  This document lists one URL, for CBOR content
-   (Section 3.1).
+   Section 4.2.2) that links to the specification of the encoding, to
+   the part of it that defines the encoding, or to its publisher's page
+   about that specification.  Anyone who specifies a deterministic
+   encoding can identify it by such a URL, and is responsible for the
+   URL, the encoding, and the encoding's Applicable Content Types
+   (Section 4.2); no registry of these URLs is needed.  A producer
+   copies the URL of the encoding it applied.  A verifier compares the
+   value with the URLs of the encodings it implements, character by
+   character ([RFC3986] Section 6.2.1), and does not dereference it.
+   This document lists one URL, for CBOR content (Section 3.1).
 
 3.1.  The URL for CBOR Content
 
-   For CBOR content, this document lists one URL: the URL at which the
-   IETF publishes Section 5 of [I-D.ietf-cbor-serialization], the
-   section that defines deterministic serialization, which Section 8 of
-   that document names "dtrm".  The URL is shown here on two lines; the
-   value has no line break or space between them:
+   For CBOR content, this document lists one URL: the URL of the RFC
+   Editor's information page for [RFC8949], which gives the status of
+   that RFC, its errata, and its formats, in the form that [RFC8949]
+   itself gives.  The URL is:
 
-   https://datatracker.ietf.org/doc/html/
-   draft-ietf-cbor-serialization-13#section-5
+   https://www.rfc-editor.org/info/rfc8949
 
-   RFC Editor: please replace this URL, here and in Section 5, with
-   https://www.rfc-editor.org/rfc/rfcNNNN#section-N, where NNNN is the
-   RFC number of [I-D.ietf-cbor-serialization] and N the number of its
-   section that defines deterministic serialization, and remove this
-   note.
-
-   The URL states that the structured value was encoded with
-   deterministic serialization as that specification defines it: the
-   Core Deterministic Encoding Requirements of [RFC8949] Section 4.2.1,
-   except that non-trivial NaNs are excluded, as Sections 4.1 and 5.1
-   and Appendix B.5 of [I-D.ietf-cbor-serialization] specify.  For a
-   CBOR sequence [RFC8742], each data item is encoded according to these
-   requirements.  Apart from that rule for NaNs, the choices that
-   [RFC8949] Section 4.2.2 leaves to a protocol are not part of this
-   encoding (Section 6).
-
-   The URL names one version of the CBOR working group's text.  If a
-   later version changes deterministic serialization, for example the
-   rule for NaNs, the changed serialization has a different URL, and
-   Hash Envelopes that carry this one keep their meaning.
-
-   The URL is listed so that producers and verifiers of CBOR content use
-   the same string: a verifier compares URLs character by character
-   (Section 3), so another URL for the same text, such as one at another
-   host, is a different value.  Other URLs, for other encodings of CBOR
-   or for encodings of other content such as JSON, are the
-   responsibility of the specifications they link to (Section 3); this
-   document does not list them.
+   As the value of deterministic-encodings, the URL states that the
+   structured value was encoded according to the Core Deterministic
+   Encoding Requirements of [RFC8949] Section 4.2.1.  It does not stand
+   for the other encodings that [RFC8949] describes, such as the length-
 
 
 
-Mih & Sokolov              Expires 23 May 2027                  [Page 6]
+Mih & Sokolov              Expires 24 May 2027                  [Page 5]
 
 Internet-Draft        COSE Deterministic Encodings         November 2026
 
+
+   first map key ordering of its Section 4.2.3.  For a CBOR sequence
+   [RFC8742], each data item is encoded according to these requirements.
+   The choices that [RFC8949] Section 4.2.2 leaves to a protocol,
+   including the representation of NaN values, are not part of this
+   encoding (Section 6).
+
+   An RFC does not change once it is published, so the URL names one
+   fixed text.  A later specification that changes deterministic
+   encoding has a URL of its own -- for example,
+   [I-D.ietf-cbor-serialization], whose deterministic serialization
+   excludes NaNs other than 0xf97e00 -- and Hash Envelopes that carry
+   this URL keep their meaning.
+
+   The URL is listed so that producers and verifiers of CBOR content use
+   the same string: a verifier compares URLs character by character
+   (Section 3), so another URL for the same text, such as the same URL
+   with a final "/" or one at another host, is a different value.  Other
+   URLs, for other encodings of CBOR or for encodings of other content
+   such as JSON, are the responsibility of the specifications they link
+   to (Section 3); this document does not list them.
 
 4.  Producer and Verifier Behavior
 
@@ -365,6 +330,14 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    value MUST match one of the Applicable Content Types of the encoding
    that deterministic-encodings identifies:
 
+
+
+
+Mih & Sokolov              Expires 24 May 2027                  [Page 6]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
    *  A 259 value that is a media-type name matches when its type and
       subtype -- with any parameters removed, and compared case-
       insensitively ([RFC6838] Section 4.2) -- equal a listed media
@@ -386,14 +359,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    does not implement the identified encoding, like one that implements
    only [RFC9995], ignores the parameter, and its results are unchanged.
 
-
-
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 7]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
 4.3.  Verifying the Content Binding
 
    A verifier that holds the preimage itself -- for example, as
@@ -413,8 +378,21 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    from the structure of the value.  If the digest of the result does
    not match the payload, the check fails.  It also fails if the
    verifier cannot produce that encoding of the value -- for example,
-   when its encoder rejects a NaN that the encoding excludes
-   (Section 3.1).
+   when the value holds a NaN with a payload that its encoder does not
+   support (Section 3.1).
+
+
+
+
+
+
+
+
+
+Mih & Sokolov              Expires 24 May 2027                  [Page 7]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
 
    When deterministic-encodings is absent, or its value is not the URL
    of an encoding the verifier implements -- for example, a URL that
@@ -434,8 +412,7 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 
    These use Extended Diagnostic Notation ([RFC8610] Appendix G), in the
    style of [RFC9995] Section 4.1; signature and key material are
-   truncated.  A long text string is shown in two parts, which form one
-   string ([RFC8610] Appendix G.4).
+   truncated.
 
    The structured value {"b": 2, "a": 1}, a CBOR map, encoded per the
    Core Deterministic Encoding Requirements of [RFC8949] Section 4.2.1
@@ -443,21 +420,13 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    preimage a2616101616202, whose SHA-256 digest is
    a0d3af9e86e5517f729bad0657e2c6f3b7d03899894c8d6b33759074c893b5e3:
 
-
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 8]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
    18([ # COSE_Sign1
      <<{
        / alg                     / 1: -7, # ES256
        / hash algorithm          / 258: -16, # sha-256
        / preimage type           / 259: "application/cbor",
        / deterministic encodings / TBD_1:
-           "https://datatracker.ietf.org/doc/html/"
-           "draft-ietf-cbor-serialization-13#section-5",
+           "https://www.rfc-editor.org/info/rfc8949",
      }>>
      / unprotected / {},
      / payload     / h'a0d3af9e...c893b5e3', # digest above
@@ -473,6 +442,13 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    deterministic-encodings to the URL listed in Section 3.1 -- recording
    its own choice, not a CoSWID requirement -- so that a verifier
    holding the decoded tag knows how to re-create the preimage.
+
+
+
+Mih & Sokolov              Expires 24 May 2027                  [Page 8]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
 
    A Hash Envelope over JSON content can carry deterministic-encodings
    with the URL of a specification that defines a deterministic encoding
@@ -498,14 +474,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    [RFC8949] Section 4.2.2 leaves to each protocol for tags and for
    integer versus floating-point values, belong to the structured value,
    not to the encoding that deterministic-encodings identifies.  A
-
-
-
-Mih & Sokolov              Expires 23 May 2027                  [Page 9]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
    choice that changes only how the same data item is serialized, such
    as encoding every floating-point value as binary64, is a different
    encoding, not the one that the URL in Section 3.1 identifies.  A
@@ -531,6 +499,13 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    already exists wherever [RFC9995] is used, and identifying the
    encoding removes an ambiguity that might have slowed such an attempt.
 
+
+
+Mih & Sokolov              Expires 24 May 2027                  [Page 9]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
 8.  IANA Considerations
 
 8.1.  COSE Header Parameters
@@ -555,13 +530,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 
                                   Table 1
 
-
-
-Mih & Sokolov              Expires 23 May 2027                 [Page 10]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
-
    The suggested value for TBD_1 is 271, the lowest unassigned value in
    the "Integer values from 256 to 65535" range of the COSE Header
    Parameters registry as of 2026-11-14.
@@ -569,13 +537,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
 9.  References
 
 9.1.  Normative References
-
-   [I-D.ietf-cbor-serialization]
-              Lundblade, L., "CBOR Serialization and Determinism", Work
-              in Progress, Internet-Draft, draft-ietf-cbor-
-              serialization-13, 15 November 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
-              serialization-13>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -592,6 +553,15 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
               RFC 6838, DOI 10.17487/RFC6838, January 2013,
               <https://www.rfc-editor.org/rfc/rfc6838>.
 
+
+
+
+
+Mih & Sokolov              Expires 24 May 2027                 [Page 10]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
    [RFC7252]  Shelby, Z., Hartke, K., and C. Bormann, "The Constrained
               Application Protocol (CoAP)", RFC 7252,
               DOI 10.17487/RFC7252, June 2014,
@@ -605,18 +575,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
-
-
-
-
-
-
-
-
-Mih & Sokolov              Expires 23 May 2027                 [Page 11]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
 
    [RFC8610]  Birkholz, H., Vigano, C., and C. Bormann, "Concise Data
               Definition Language (CDDL): A Notational Convention to
@@ -653,6 +611,20 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
    [DAG-CBOR] IPLD, "Specification: DAG-CBOR", 2026,
               <https://ipld.io/specs/codecs/dag-cbor/spec/>.
 
+
+
+Mih & Sokolov              Expires 24 May 2027                 [Page 11]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
+   [I-D.ietf-cbor-serialization]
+              Lundblade, L., "CBOR Serialization and Determinism", Work
+              in Progress, Internet-Draft, draft-ietf-cbor-
+              serialization-13, 15 November 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-cbor-
+              serialization-13>.
+
    [RFC3275]  Eastlake 3rd, D., Reagle, J., and D. Solo, "(Extensible
               Markup Language) XML-Signature Syntax and Processing",
               RFC 3275, DOI 10.17487/RFC3275, March 2002,
@@ -662,17 +634,6 @@ Internet-Draft        COSE Deterministic Encodings         November 2026
               Waltermire, "Concise Software Identification Tags",
               RFC 9393, DOI 10.17487/RFC9393, June 2023,
               <https://www.rfc-editor.org/rfc/rfc9393>.
-
-
-
-
-
-
-
-Mih & Sokolov              Expires 23 May 2027                 [Page 12]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
 
    [RFC9711]  Lundblade, L., Mandyam, G., O'Donoghue, J., and C.
               Wallace, "The Entity Attestation Token (EAT)", RFC 9711,
@@ -691,11 +652,13 @@ Appendix A.  Changes from Version 01
       specifies an encoding identifies it by a URL and is responsible
       for it.
 
-   *  This document lists one URL, for CBOR content: the URL of
-      Section 5 of [I-D.ietf-cbor-serialization], now version 13, which
-      defines the same serialization (Section 3.1).  The NaN rule is
-      unchanged.  Until that document is an RFC, the URL names the
-      version of the draft; the RFC Editor replaces it.
+   *  This document lists one URL, for CBOR content: the URL of the RFC
+      Editor's information page for [RFC8949], which stands for the Core
+      Deterministic Encoding Requirements of its Section 4.2.1
+      (Section 3.1).  An RFC does not change, so the URL needs no
+      replacement later.  Unlike "dtrm", this encoding does not exclude
+      NaNs other than 0xf97e00: the representation of NaN values is one
+      of the choices that [RFC8949] Section 4.2.2 leaves to a protocol.
 
    *  The outcome "unverified" is removed: the check of a content
       binding succeeds or fails, as [RFC9995] Section 5.3 describes it.
@@ -703,12 +666,17 @@ Appendix A.  Changes from Version 01
       its value is not the URL of an encoding the verifier implements,
       including the text string "dtrm", and checks the content binding
       as for a Hash Envelope without it.  When a verifier cannot produce
+
+
+
+Mih & Sokolov              Expires 24 May 2027                 [Page 12]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
       the identified encoding of a structured value, the check fails.
       Only a verifier that implements the identified encoding checks
       preimage-content-type (259) against it (Section 4.2, Section 4.3).
-
-   *  [I-D.ietf-cbor-serialization] is a normative reference, since the
-      listed URL identifies part of it.
 
    *  Examples show the URL and a JSON case with a URL that this
       document does not list (Section 5); Security Considerations state
@@ -719,16 +687,6 @@ Appendix A.  Changes from Version 01
       shows instead a value that has two valid CBOR encodings, one of
       them deterministic, and why stating the encoding lets a verifier
       tell a modified value from one encoded another way (Section 1).
-
-
-
-
-
-
-Mih & Sokolov              Expires 23 May 2027                 [Page 13]
-
-Internet-Draft        COSE Deterministic Encodings         November 2026
-
 
 Appendix B.  Changes from Version 00
 
@@ -763,6 +721,15 @@ Acknowledgments
    [RFC9995] and proposed the name core-deterministic, and Henk Birkholz
    for a review of its scope, motivation, and terminology.
 
+
+
+
+
+Mih & Sokolov              Expires 24 May 2027                 [Page 13]
+
+Internet-Draft        COSE Deterministic Encodings         November 2026
+
+
 Authors' Addresses
 
    Steven Mih
@@ -781,4 +748,37 @@ Authors' Addresses
 
 
 
-Mih & Sokolov              Expires 23 May 2027                 [Page 14]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Mih & Sokolov              Expires 24 May 2027                 [Page 14]
