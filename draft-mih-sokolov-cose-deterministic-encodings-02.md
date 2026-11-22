@@ -64,12 +64,11 @@ permits more than one encoding of the same data item, and the preimage
 content type does not identify the encoding that was applied. This
 document defines a COSE Hash Envelope protected-header
 parameter that identifies the encoding by a URL, and lists one URL, for
-CBOR content: the URL of the RFC Editor's information page for RFC 8949,
-which stands for the Core Deterministic Encoding Requirements of that
-document. Other specifications can identify their encodings by URLs of
-their own. A
-verifier that does not implement the identified encoding ignores the
-parameter.
+CBOR content: the URL of Section 4.2.1 of RFC 8949, the Core
+Deterministic Encoding Requirements. Other URLs are defined by the
+application profiles that use the parameter. A verifier acts only on the
+URLs of the encodings its application profile names; it ignores any
+other value.
 
 --- note_Note_to_Readers
 
@@ -225,26 +224,34 @@ producer MUST NOT list label TBD\_1 in the crit header parameter
 
 The value of deterministic-encodings is a text string holding a URL: a
 URI ({{RFC3986}} Section 3) with the "https" scheme ({{RFC9110}} Section
-4.2.2) that links to the specification of the encoding, to the part of
-it that defines the encoding, or to its publisher's page about that
-specification. Anyone who specifies a deterministic
-encoding can identify it by such a URL, and is responsible for the URL,
-the encoding, and the encoding's Applicable Content Types
-({{consistency}}); no registry of these URLs is needed. A producer copies
-the URL of the encoding it applied. A verifier compares the value with the
-URLs of the encodings it implements, character by character ({{RFC3986}}
-Section 6.2.1), and does not dereference it. This document lists one URL,
-for CBOR content ({{cbor-value}}).
+4.2.2) that links to the part of a specification that defines exactly one
+deterministic encoding. When the linked document defines more than one
+encoding, the URL MUST carry a fragment that selects the section defining
+the encoding that was applied; a URL that names the whole document is then
+not a valid value. A producer copies the URL of the encoding it applied. A
+verifier compares the value with the URLs of the encodings it implements,
+character by character ({{RFC3986}} Section 6.2.1), and does not
+dereference it.
+
+This document lists one URL, for CBOR content ({{cbor-value}}). Which
+other URLs a producer may use, and which a verifier acts on, is decided by
+the application profile that uses this parameter, not by this document; a
+profile that names a URL is responsible for the URL, the encoding, and the
+encoding's Applicable Content Types ({{consistency}}). A producer MUST NOT
+use a URL that is neither listed here nor named by the application profile
+it follows. No registry of these URLs is needed, and a URL that no profile
+names changes no verification outcome: a verifier ignores it
+({{verification}}).
 
 ## The URL for CBOR Content {#cbor-value}
 
-For CBOR content, this document lists one URL: the URL of the RFC
-Editor's information page for {{RFC8949}}, which gives the status of that
-RFC, its errata, and its formats, in the form that {{RFC8949}} itself
-gives. The URL is:
+For CBOR content, this document lists one URL: the URL of Section 4.2.1
+of {{RFC8949}} on the RFC Editor's site. {{RFC8949}} describes more than
+one encoding, so the URL carries the fragment of that section
+({{header-param}}). The URL is:
 
 ~~~
-https://www.rfc-editor.org/info/rfc8949
+https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1
 ~~~
 
 As the value of deterministic-encodings, the URL states that the
@@ -259,16 +266,23 @@ representation of NaN values, are not part of this encoding
 
 An RFC does not change once it is published, so the URL names one fixed
 text. A later specification that changes deterministic encoding has a URL
-of its own -- for example, {{I-D.ietf-cbor-serialization}}, whose
-deterministic serialization excludes NaNs other than 0xf97e00 -- and
-Hash Envelopes that carry this URL keep their meaning.
+of its own, and Hash Envelopes that carry this URL keep their meaning. For
+example, {{I-D.ietf-cbor-serialization}} defines preferred-plus
+serialization (its Section 4) and deterministic serialization (its Section
+5), and its deterministic serialization excludes NaNs other than 0xf97e00.
+Once published as an RFC, its deterministic serialization would be
+identified by the URL of that RFC's Section 5, with the fragment, which is
+a different value from the URL listed here. Its preferred-plus
+serialization is not deterministic when the value contains a map (its
+Section 5.3.2), so it is not an encoding for this parameter.
 
 The URL is listed so that producers and verifiers of CBOR content use the
 same string: a verifier compares URLs character by character
-({{header-param}}), so another URL for the same text, such as the same URL
-with a final "/" or one at another host, is a different value. Other URLs, for other encodings of
-CBOR or for encodings of other content such as JSON, are the
-responsibility of the specifications they link to ({{header-param}}); this
+({{header-param}}), so another URL for the same text, such as the URL
+without its fragment, the RFC Editor's information page for {{RFC8949}},
+or a URL at another host, is a different value. Other URLs, for other
+encodings of CBOR or for encodings of other content such as JSON, are
+named by the application profiles that use them ({{header-param}}); this
 document does not list them.
 
 # Producer and Verifier Behavior {#behavior}
@@ -339,8 +353,9 @@ value -- for example, when the value holds a NaN with a payload that its
 encoder does not support ({{cbor-value}}).
 
 When deterministic-encodings is absent, or its value is not the URL of an
-encoding the verifier implements -- for example, a URL that this document
-does not list, or a value that is not a text string -- the verifier
+encoding the verifier implements -- for example, a URL that neither this
+document nor the verifier's application profile names, or a value that is
+not a text string -- the verifier
 ignores the parameter, and checks the content binding as it would for a
 Hash Envelope without it, as {{RFC9995}} Section 5.3 describes. This
 document adds no other outcome.
@@ -370,7 +385,7 @@ key order, placing "a" before "b"), gives the 7-octet preimage
     / hash algorithm          / 258: -16, # sha-256
     / preimage type           / 259: "application/cbor",
     / deterministic encodings / TBD_1:
-        "https://www.rfc-editor.org/info/rfc8949",
+        "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1",
   }>>
   / unprotected / {},
   / payload     / h'a0d3af9e...c893b5e3', # digest above
@@ -391,8 +406,8 @@ verifier holding the decoded tag knows how to re-create the preimage.
 A Hash Envelope over JSON content can carry deterministic-encodings with
 the URL of a specification that defines a deterministic encoding of JSON,
 such as "https://json-spec.example/deterministic", with
-preimage-content-type "application/json". This document does not list
-that URL. A verifier that implements that encoding and holds the decoded
+preimage-content-type "application/json", when the application profile
+the producer follows names that URL. This document does not list it. A verifier that implements that encoding and holds the decoded
 JSON value re-creates the preimage with it. A verifier that does not
 implement it ignores the parameter, and checks the content binding as
 {{RFC9995}} Section 5.3 describes ({{verification}}).
@@ -465,11 +480,19 @@ registry as of 2026-11-14.
   its CDDL control operator. A URL needs no registry: whoever specifies an
   encoding identifies it by a URL and is responsible for it.
 
-* This document lists one URL, for CBOR content: the URL of the RFC
-  Editor's information page for {{RFC8949}}, which stands for the Core
-  Deterministic Encoding Requirements of its Section 4.2.1
-  ({{cbor-value}}). An RFC does not change, so the URL needs no
-  replacement later. Unlike "dtrm", this encoding does not exclude NaNs
+* This document lists one URL, for CBOR content: the URL of Section
+  4.2.1 of {{RFC8949}}, the Core Deterministic Encoding Requirements, with
+  its fragment ({{cbor-value}}). A URL MUST select exactly one encoding, so
+  a document that defines more than one, such as {{RFC8949}} or
+  {{I-D.ietf-cbor-serialization}}, is named with the fragment of the
+  section that defines the encoding ({{header-param}}). An RFC does not
+  change, so the URL needs no replacement later.
+
+* Other URLs are named by the application profile that uses the
+  parameter, not by this document, and a producer uses no URL that is
+  neither listed here nor named by its profile. A verifier acts only on
+  the URLs its profile names, so an arbitrary URL changes no verification
+  outcome ({{header-param}}). Unlike "dtrm", this encoding does not exclude NaNs
   other than 0xf97e00: the representation of NaN values is one of the
   choices that {{RFC8949}} Section 4.2.2 leaves to a protocol.
 

@@ -205,6 +205,13 @@ def build() -> dict:
                     "is ignored",
                     header(alg=-7, hash=-16, ctype="application/cbor", enc="dtrm"), ex_dig,
                     "failed", "encoding-not-implemented", value_cbor=ex_value),
+        verify_case("verify-value-info-page-url", "Holds only the value; the header carries "
+                    "the RFC Editor's information page for RFC 8949, which names the whole "
+                    "document with no section fragment, so it is not the listed URL and is "
+                    "ignored",
+                    header(alg=-7, hash=-16, ctype="application/cbor",
+                           enc="https://www.rfc-editor.org/info/rfc8949"), ex_dig,
+                    "failed", "encoding-not-implemented", value_cbor=ex_value),
         verify_case("verify-value-other-url-json", "Holds only a JSON value's decoded form; the "
                     "header carries a URL this document does not list, with application/json, "
                     "which a verifier that does not implement it ignores",

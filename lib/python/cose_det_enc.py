@@ -29,10 +29,9 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-# The one URL the draft lists: the RFC Editor's information page for RFC 8949,
-# which stands for the Core Deterministic Encoding Requirements of RFC 8949
-# Section 4.2.1.  It is compared as a string and never dereferenced.
-CORE_DETERMINISTIC = "https://www.rfc-editor.org/info/rfc8949"
+# The one URL the draft lists: the URL of RFC 8949 Section 4.2.1, the Core
+# Deterministic Encoding Requirements, with its section fragment.  It is compared as a string and never dereferenced.
+CORE_DETERMINISTIC = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
 
 # The check of a content binding succeeds or fails; the draft adds no other
 # outcome.

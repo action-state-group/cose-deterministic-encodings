@@ -37,11 +37,11 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is the one URL the draft lists: the RFC Editor's
-// information page for RFC 8949, which stands for the Core Deterministic
-// Encoding Requirements of RFC 8949 Section 4.2.1. It is compared as a string
+// CoreDeterministic is the one URL the draft lists: the URL of RFC 8949
+// Section 4.2.1, the Core Deterministic Encoding Requirements, with its
+// section fragment. It is compared as a string
 // and never dereferenced.
-const CoreDeterministic = "https://www.rfc-editor.org/info/rfc8949"
+const CoreDeterministic = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
 
 // Content-binding outcomes: the check succeeds or fails, and the draft adds
 // no other outcome.
