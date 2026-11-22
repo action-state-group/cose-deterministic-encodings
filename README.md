@@ -9,11 +9,12 @@ hashed bytes — so a verifier cannot reliably recompute the hash. This draft
 defines one Hash Envelope protected-header parameter
 (`deterministic-encodings`), naming the deterministic encoding a producer
 applied before hashing a Hash Envelope payload by a URL, and lists one URL, for
-CBOR content: the RFC Editor's information page for RFC 8949,
-`https://www.rfc-editor.org/info/rfc8949`, which stands for the Core
-Deterministic Encoding Requirements of RFC 8949 §4.2.1.
-Anyone who specifies another encoding can identify it by a URL of its own and is
-responsible for it; no registry is needed. A verifier that does not implement the
+CBOR content: the URL of RFC 8949 §4.2.1, the Core Deterministic Encoding
+Requirements, with its section fragment:
+`https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1`.
+A URL selects exactly one encoding, so a document that defines several is named
+with a section fragment. Other URLs are named by the application profile that
+uses the parameter; no registry is needed. A verifier that does not implement the
 identified encoding ignores the parameter and checks the payload as RFC 9995
 describes, so the check is verified or failed, with no other outcome. The draft
 extends the Hash Envelope through its existing extension point and changes
