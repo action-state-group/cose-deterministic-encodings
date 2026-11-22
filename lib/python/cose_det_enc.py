@@ -5,9 +5,8 @@ A minimal, standard-library-only reference for
 draft-mih-sokolov-cose-deterministic-encodings.  It builds the protected header
 and payload of a COSE Hash Envelope (RFC 9995) whose preimage is a structured
 value encoded under the Core Deterministic Encoding Requirements (RFC 8949
-Section 4.2.1), and checks a content binding, reporting verified, failed or
-unverified as the draft's "Producer
-and Verifier Behavior" section specifies.
+Section 4.2.1), and checks a content binding, reporting verified or failed
+as the draft's "Producer and Verifier Behavior" section specifies.
 
 Signing is out of scope: the header parameter concerns the content binding,
 which the draft keeps independent of signature validity.
@@ -30,13 +29,15 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-# The one value the draft defines: RFC 8949 Section 4.2.1, as the
-# deterministic serialization ("dtrm") of draft-ietf-cbor-serialization.
-CORE_DETERMINISTIC = "dtrm"
+# The one URL the draft lists: the RFC Editor's information page for RFC 8949,
+# which stands for the Core Deterministic Encoding Requirements of RFC 8949
+# Section 4.2.1.  It is compared as a string and never dereferenced.
+CORE_DETERMINISTIC = "https://www.rfc-editor.org/info/rfc8949"
 
+# The check of a content binding succeeds or fails; the draft adds no other
+# outcome.
 VERIFIED = "verified"
 FAILED = "failed"
-UNVERIFIED = "unverified"
 
 # COSE Algorithms registry: the hash algorithms this reference implements.
 HASH_ALGS = {
@@ -45,7 +46,8 @@ HASH_ALGS = {
     -44: "sha512",
 }
 
-# Applicable Content Types of "dtrm" (the draft's consistency section).
+# Applicable Content Types of the encoding that URL identifies (the draft's
+# consistency section).
 CORE_DETERMINISTIC_MEDIA_TYPES = frozenset({
     "application/cbor",
     "application/cbor-seq",
@@ -99,20 +101,22 @@ class Simple:
 
 @dataclass(frozen=True)
 class NonTrivialNaN:
-    """A decoded NaN other than the one "dtrm" emits: a signaling NaN, a NaN
+    """A decoded NaN other than the one this reference emits: a signaling NaN, a NaN
     with a non-zero payload, or a NaN with the sign bit set.
 
-    The decoder decides this from the encoded bits, because a Python float
-    cannot carry the distinction: struct.unpack(">e", bytes.fromhex("7e01"))
-    gives the bits 7ff8000000000000, and the payload is gone.  ``encoded``
-    holds the data item as received (initial byte and argument).
+    The decoder decides this from the encoded bits, because the float that
+    struct returns may have lost the distinction, depending on the Python
+    version: before 3.14, struct.unpack(">e", bytes.fromhex("7e01")) gives
+    the bits 7ff8000000000000, and the payload is gone.  ``encoded`` holds
+    the data item as received (initial byte and argument).
     """
     encoded: bytes
 
 
-# The one NaN "dtrm" emits, 0xf97e00 (draft-ietf-cbor-serialization Section
-# 4.1): sign bit clear, most significant significand bit set, all remaining
-# significand bits clear.  As binary64 and as binary32 its bits are these.
+# The one NaN this reference emits, 0xf97e00: sign bit clear, most significant
+# significand bit set, all remaining significand bits clear.  RFC 8949 Section
+# 4.2.2 leaves the representation of NaN to a protocol and names 0xf97e00 as
+# the typical single choice.  As binary64 and as binary32 its bits are these.
 _QNAN_BITS64 = 0x7FF8000000000000
 _QNAN = struct.unpack(">d", _QNAN_BITS64.to_bytes(8, "big"))[0]
 _TRIVIAL_NAN_BITS = {25: 0x7E00, 26: 0x7FC00000, 27: _QNAN_BITS64}
@@ -142,12 +146,12 @@ def _float(value: float) -> bytes:
     # Preferred serialization: the shortest of binary16/32/64 that represents
     # the value exactly (RFC 8949 Section 4.2.1, by way of Section 4.1).
     if math.isnan(value):
-        # "dtrm" emits one NaN, 0xf97e00, and this reference rejects every
-        # other NaN rather than change the value it hashes.  Decided by bit
+        # This reference emits one NaN, 0xf97e00, and rejects every other NaN
+        # rather than change the value it hashes (RFC 8949 Section 4.2.2).  Decided by bit
         # pattern: a sign bit or a payload makes the float a non-trivial NaN.
         if struct.unpack(">Q", struct.pack(">d", value))[0] == _QNAN_BITS64:
             return b"\xf9\x7e\x00"
-        raise EncodeError("non-trivial NaN: \"dtrm\" emits only 0xf97e00")
+        raise EncodeError("non-trivial NaN: this reference emits only 0xf97e00")
     for fmt, ai in (("e", 25), ("f", 26)):
         try:
             packed = struct.pack(">" + fmt, value)
@@ -190,7 +194,7 @@ def encode_core_deterministic(value: Any) -> bytes:
     if isinstance(value, Tag):
         return _head(6, value.number) + encode_core_deterministic(value.value)
     if isinstance(value, NonTrivialNaN):
-        raise EncodeError("non-trivial NaN: \"dtrm\" emits only 0xf97e00")
+        raise EncodeError("non-trivial NaN: this reference emits only 0xf97e00")
     if isinstance(value, Simple):
         if 24 <= value.value <= 31 or not 0 <= value.value <= 255:
             raise EncodeError("invalid simple value")
@@ -224,7 +228,7 @@ def decode(data: bytes) -> Any:
     Integers and floating-point values stay distinct, and a map decodes to a
     Map.  A map whose keys are not all distinct is rejected.  A NaN decodes,
     by its encoded bits, to the float with bits 7ff8000000000000 when it is
-    the one NaN "dtrm" emits, and to NonTrivialNaN otherwise.
+    the one NaN this reference emits, and to NonTrivialNaN otherwise.
     """
     value, end = _decode(data, 0)
     if end != len(data):
@@ -386,7 +390,7 @@ def emit(value: Any, content_type: Any, *, alg: int = -7, hash_alg: int = -16,
 
 @dataclass(frozen=True)
 class Result:
-    outcome: str  # VERIFIED, FAILED or UNVERIFIED
+    outcome: str  # VERIFIED or FAILED
     reason: str
 
 
@@ -397,7 +401,8 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
 
     protected is the serialized protected header map.  Pass the preimage
     octets if the verifier holds them, or a structured value (has_value=True)
-    if it holds only that.  Signature validity is not checked here.
+    if it holds only that.  The outcome is VERIFIED or FAILED, and the reason
+    says why.  Signature validity is not checked here.
     """
     header = decode(protected)
     if not isinstance(header, Map):
@@ -406,15 +411,17 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     encoding = header.get(label)
     has_ctype = header.has(LABEL_PREIMAGE_CONTENT_TYPE)
     ctype = header.get(LABEL_PREIMAGE_CONTENT_TYPE)
-    # Only the text string "dtrm" is recognized; any other value, including
-    # the integer 1 an -00 producer writes, is not.
+    # Only the URL the draft lists is implemented.  Any other value, including
+    # the integer 1 an -00 producer writes and the text string "dtrm" an -01
+    # producer writes, is ignored, and the check is the RFC 9995 one.
     recognized = isinstance(encoding, str) and encoding in ENCODINGS
 
-    # Consistency with preimage-content-type: this check comes first.
-    if has_encoding:
+    # Consistency with preimage-content-type, for an encoding this verifier
+    # implements: this check comes first.
+    if recognized:
         if not has_ctype:
             return Result(FAILED, "content-type-absent")
-        if recognized and not content_type_matches(encoding, ctype):
+        if not content_type_matches(encoding, ctype):
             return Result(FAILED, "content-type-mismatch")
 
     hash_alg = header.get(LABEL_PAYLOAD_HASH_ALG)
@@ -423,23 +430,25 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     # RFC 9995 Section 5.3: a held preimage needs no encoding information.
     if preimage is not None:
         if hash_name is None:
-            return Result(UNVERIFIED, "hash-alg-not-implemented")
+            return Result(FAILED, "hash-alg-not-implemented")
         if hashlib.new(hash_name, preimage).digest() == payload:
             return Result(VERIFIED, "preimage-digest-match")
         return Result(FAILED, "preimage-digest-mismatch")
 
+    # Without the preimage, only an encoding this verifier implements can
+    # re-create it; otherwise the RFC 9995 check has nothing to hash.
     if not has_value:
-        return Result(UNVERIFIED, "no-content")
+        return Result(FAILED, "no-content")
     if not has_encoding:
-        return Result(UNVERIFIED, "encoding-absent")
+        return Result(FAILED, "encoding-absent")
     if not recognized:
-        return Result(UNVERIFIED, "encoding-not-implemented")
+        return Result(FAILED, "encoding-not-implemented")
     if hash_name is None:
-        return Result(UNVERIFIED, "hash-alg-not-implemented")
+        return Result(FAILED, "hash-alg-not-implemented")
     try:
         recreated = ENCODINGS[encoding](value)
     except EncodeError:
-        return Result(UNVERIFIED, "value-not-encodable")
+        return Result(FAILED, "value-not-encodable")
     if hashlib.new(hash_name, recreated).digest() == payload:
         return Result(VERIFIED, "recreated-digest-match")
     return Result(FAILED, "recreated-digest-mismatch")

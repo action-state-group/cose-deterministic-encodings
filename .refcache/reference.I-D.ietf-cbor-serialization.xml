@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-12">
+<reference anchor="I-D.ietf-cbor-serialization" target="https://datatracker.ietf.org/doc/html/draft-ietf-cbor-serialization-13">
    <front>
       <title>CBOR Serialization and Determinism</title>
       <author initials="L." surname="Lundblade" fullname="Laurence Lundblade">
          <organization>Security Theory LLC</organization>
       </author>
-      <date month="October" day="30" year="2026" />
+      <date month="November" day="15" year="2026" />
       <abstract>
 	 <t>   RFC 8949 defines CBOR, a standard for serializing data types such as
    integers, strings, and arrays into encoded bytes.  CBOR serialization
    is flexible, allowing data types to be encoded in multiple ways to
-   accommodate deployment in constrained environments.  This document
-   normatively defines one particular serialization, called &quot;preferred-
-   plus serialization,&quot; that is suitable for the majority of CBOR-based
-   protocols.  Protocol designers and implementers who choose it need
-   not understand or specify serialization details themselves.  This
-   document also normatively defines a deterministic serialization.
-   These serializations are largely compatible with those widely
-   implemented by the CBOR community.
+   accommodate deployment in constrained environments.
+
+   This document introduces the term “general serialization” for the
+   full set of encodings permitted by RFC 8949, and formally defines two
+   specific serializations: preferred-plus serialization, which differs
+   from preferred serialization only in cases rarely encountered in
+   practice and is recommended for broad use; and deterministic
+   serialization, which likewise differs only in rarely encountered
+   cases from core deterministic encoding defined in RFC 8949.
 
    This document updates RFC 8949 with a new rule that limits how new
    tag definitions can affect the CBOR data model.
@@ -30,6 +31,6 @@
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-12" />
+   <seriesInfo name="Internet-Draft" value="draft-ietf-cbor-serialization-13" />
    
 </reference>
