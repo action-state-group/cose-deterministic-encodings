@@ -19,7 +19,7 @@ const url02 = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
 
 func readDraft(t *testing.T) []byte {
 	t.Helper()
-	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-03.md")
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-04.md")
 	if err != nil {
 		t.Fatal(err)
 	}

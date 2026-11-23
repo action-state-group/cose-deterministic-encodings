@@ -1,7 +1,7 @@
 ---
 title: "Deterministic Encodings for COSE"
 abbrev: "COSE Deterministic Encodings"
-docname: draft-mih-sokolov-cose-deterministic-encodings-03
+docname: draft-mih-sokolov-cose-deterministic-encodings-04
 date: 2026-11-23
 category: std
 ipr: trust200902
@@ -43,6 +43,7 @@ normative:
 informative:
   I-D.ietf-cbor-serialization:
   RFC3275:
+  RFC8785:
   RFC9393:
   RFC9711:
   DAG-CBOR:
@@ -55,18 +56,17 @@ informative:
 --- abstract
 
 A COSE Hash Envelope signs the digest of a preimage, not the preimage
-itself. When the preimage is the encoding of a structured value, such as a
-CBOR data item, and a verifier holds that value but not the bytes that were
-hashed, the verifier has to encode the value again, and the digest matches
-only if it applies the same deterministic encoding as the producer. CBOR
-permits more than one encoding of the same data item, and the preimage
-content type does not identify the encoding that was applied. This
-document defines a COSE Hash Envelope protected-header
-parameter that identifies the encoding: the integer 1 for the Core
-Deterministic Encoding Requirements of RFC 8949, or a URL for any other
-encoding, named by the application profile that uses the parameter. A
-verifier ignores a value that does not identify an encoding it
-implements.
+itself. A verifier that holds the content as a decoded value, such as a
+CBOR data item, rather than the bytes that were hashed has to encode the
+value again, and nothing in the Hash Envelope says how the producer
+encoded it. CBOR permits more than one encoding of the same data item, so
+a digest mismatch cannot tell a modified value from a value encoded
+another way. This document defines a COSE Hash Envelope protected-header
+parameter in which the producer states the deterministic encoding it
+applied. It defines one value, the integer 1, for the Core Deterministic
+Encoding Requirements of RFC 8949, and no encoding of its own; an
+application profile can identify another encoding by a URL. A verifier
+ignores a value that does not identify an encoding it implements.
 
 --- note_Note_to_Readers
 
@@ -79,6 +79,51 @@ vectors, is at
 --- middle
 
 # Introduction {#intro}
+
+## Problem Statement {#problem}
+
+A COSE Hash Envelope {{RFC9995}} signs the digest of a preimage. A
+verifier checks the content binding by hashing the preimage and comparing
+the result with the payload ({{RFC9995}} Section 5.3). Often, though, a
+verifier does not hold the preimage: it holds the content as a decoded
+value, such as a CBOR data item that arrived inside a larger message or
+was kept as a database record. To check that value, the verifier has to
+encode it again and hash the result.
+
+Re-encoding reproduces the preimage only if the verifier applies the
+encoding the producer applied, and nothing in the Hash Envelope says what
+that was. CBOR permits more than one encoding of the same data item
+({{RFC8949}} Section 4.2), and a producer need not apply a deterministic
+one: `{"x": 1.5}` is `a1 61 78 f9 3e 00` under the Core Deterministic
+Encoding Requirements ({{RFC8949}} Section 4.2.1) and
+`a1 61 78 fb 3f f8 00 00 00 00 00 00` when every floating-point value is
+written as binary64, and both are valid CBOR. A verifier that re-encodes
+the value deterministically and computes a different digest cannot tell
+which happened: the value was modified, or the producer encoded it
+another way. Nor can it tell beforehand whether re-encoding can succeed,
+or whether it has to obtain the bytes that were hashed.
+
+The gap is not a missing deterministic encoding: {{RFC8949}} Section
+4.2.1 defines one, and this document defines none. The gap is that the
+Hash Envelope identifies the hash algorithm (258) and the content type
+(259) of the preimage, but not whether the producer applied a
+deterministic encoding to create it. This document fills that gap with one
+protected-header parameter, in which the producer states the encoding it
+applied, as it states the hash algorithm in payload-hash-alg (258). For
+CBOR content the statement is the integer 1: the preimage is the Core
+Deterministic Encoding of the value, and a verifier that re-encodes the
+value that way reproduces it unless the value changed. When the parameter
+is absent, nothing changes: the verifier needs the preimage, as
+{{RFC9995}} Section 5.3 describes.
+
+The same gap exists for other structured content hashed under a Hash
+Envelope, such as JSON canonicalized with the JSON Canonicalization Scheme
+{{RFC8785}}. This document defines no value for such encodings. A
+text-string value, a URL, is the extension point by which an application
+profile can identify one ({{header-param}}), so that the parameter need
+not be redefined to serve them.
+
+## Background and Approach {#approach}
 
 The COSE Hash Envelope {{RFC9995}} signs the digest of a preimage and
 identifies the hash algorithm (258), the content type of the preimage (259),
@@ -112,13 +157,8 @@ how that structure is encoded ({{RFC9052}} Sections 4.4 and 9). For a Hash
 Envelope preimage, whose content type the application chooses, COSE fixes
 no encoding.
 
-Re-encoding reproduces the preimage only if the verifier applies the
-encoding the producer applied. CBOR permits more than one encoding of the
-same data item ({{RFC8949}} Section 4.2), and a producer need not apply a
-deterministic one: `{"x": 1.5}` is `a1 61 78 f9 3e 00` under the Core
-Deterministic Encoding Requirements ({{RFC8949}} Section 4.2.1) and
-`a1 61 78 fb 3f f8 00 00 00 00 00 00` when every
-floating-point value is written as binary64, and both are valid CBOR. The
+As {{problem}} describes, re-encoding reproduces the preimage only if
+the verifier applies the encoding the producer applied. The
 preimage-content-type (259) names the type of the content, such as
 application/swid+cbor, not the encoding applied to it. A verifier that
 assumes an encoding the producer did not state cannot tell a modified
@@ -128,10 +168,11 @@ value the verifier holds is not the value the producer encoded. When it does not
 content binding as {{RFC9995}} Section 5.3 describes ({{verification}}).
 
 This document defines one protected-header parameter,
-deterministic-encodings, which identifies that encoding: the integer 1
-identifies the Core Deterministic Encoding Requirements of {{RFC8949}}
-Section 4.2.1 ({{cbor-value}}), and any other encoding is identified by a
-URL that an application profile names ({{header-param}}). This
+deterministic-encodings, which identifies that encoding. The integer 1,
+the one value this document defines, identifies the Core Deterministic
+Encoding Requirements of {{RFC8949}} Section 4.2.1 ({{cbor-value}}); an
+application profile can identify another encoding by a URL
+({{header-param}}). This
 document defines no encoding of its own. As with the hash algorithm in
 payload-hash-alg (258), the producer states its choice and the verifier
 follows it. Naming a canonicalization or a profile by a URI has precedent:
@@ -405,9 +446,11 @@ verifier holding the decoded tag knows how to re-create the preimage.
 
 A Hash Envelope over JSON content can carry deterministic-encodings with
 the URL of a specification that defines a deterministic encoding of JSON,
-such as "https://json-spec.example/deterministic", with
-preimage-content-type "application/json", when the application profile
-the producer follows names that URL. This document does not name it. A verifier that implements that encoding and holds the decoded
+such as the JSON Canonicalization Scheme {{RFC8785}},
+"https://www.rfc-editor.org/rfc/rfc8785", with preimage-content-type
+"application/json", when the application profile the producer follows
+names that URL. {{RFC8785}} defines one encoding, so the URL carries no
+fragment ({{header-param}}). This document does not name the URL. A verifier that implements that encoding and holds the decoded
 JSON value re-creates the preimage with it. A verifier that does not
 implement it ignores the parameter, and checks the content binding as
 {{RFC9995}} Section 5.3 describes ({{verification}}).
@@ -466,6 +509,22 @@ The suggested value for TBD\_1 is 271, the lowest unassigned value in the
 registry as of 2026-11-23.
 
 --- back
+
+# Changes from Version 03
+{:removeinrfc}
+
+* {{intro}} opens with a Problem Statement ({{problem}}): a verifier that
+  holds a decoded value rather than the hashed bytes has to re-encode it,
+  and nothing in the Hash Envelope says whether the producer applied a
+  deterministic encoding. The gap is that missing statement, not a missing
+  encoding. The abstract opens with the same problem.
+
+* The text-string (URL) value is presented as the extension point for
+  application profiles; the integer 1 is the one value this document
+  defines. Neither the CDDL nor any processing rule changes.
+
+* The JSON example names the JSON Canonicalization Scheme {{RFC8785}}
+  instead of a placeholder URL.
 
 # Changes from Version 02
 {:removeinrfc}
