@@ -42,6 +42,7 @@ normative:
 
 informative:
   I-D.ietf-cbor-serialization:
+  I-D.caballero-cbor-cborc42:
   RFC3275:
   RFC8785:
   RFC9393:
@@ -52,6 +53,12 @@ informative:
     date: 2026
     author:
       - organization: IPLD
+  CTAP2:
+    title: "Client to Authenticator Protocol (CTAP)"
+    target: https://fidoalliance.org/specs/fido-v2.2-ps-20250714/fido-client-to-authenticator-protocol-v2.2-ps-20250714.html
+    date: 2025-07-14
+    author:
+      - organization: FIDO Alliance
 
 --- abstract
 
@@ -116,12 +123,29 @@ value that way reproduces it unless the value changed. When the parameter
 is absent, nothing changes: the verifier needs the preimage, as
 {{RFC9995}} Section 5.3 describes.
 
-The same gap exists for other structured content hashed under a Hash
-Envelope, such as JSON canonicalized with the JSON Canonicalization Scheme
-{{RFC8785}}. This document defines no value for such encodings. A
-text-string value, a URL, is the extension point by which an application
-profile can identify one ({{header-param}}), so that the parameter need
-not be redefined to serve them.
+Which deterministic encoding was applied matters as well. A
+deterministic encoding process selects one encoding for each data item,
+and three such processes are in common use for CBOR. The Core
+Deterministic Encoding Requirements of {{RFC8949}} Section 4.2.1 require
+the preferred serialization of its Section 4.1. Its Section 4.2.3 orders
+map keys length-first instead, for protocols that need compatibility with
+an earlier definition of canonical CBOR; this process is used mostly in
+FIDO {{CTAP2}}, and the Python library cbor2 implements only this one.
+CBOR/c-42 {{I-D.caballero-cbor-cborc42}}, part of the DAG-CBOR profile
+{{DAG-CBOR}} that the IPFS and IPLD ecosystem uses, chooses its own
+serialization for some data items instead of the preferred serialization
+of {{RFC8949}}. Each process yields one encoding per data item, but the
+three need not yield the same one, so a verifier that re-encodes a value
+has to know which process the producer applied.
+
+{{RFC8949}} offers the second only for compatibility with that earlier
+definition, and the third departs from its preferred serialization. This
+document therefore steers protocols that need a deterministic encoding to
+the first, unless a legacy deployment favors another: the integer 1
+identifies the first ({{cbor-value}}). A text-string value, a URL, is the
+extension point by which an application profile can identify another
+encoding ({{header-param}}), so that the parameter need not be redefined
+to serve it.
 
 ## Background and Approach {#approach}
 
@@ -526,6 +550,12 @@ registry as of 2026-11-23.
 * The JSON example names the JSON Canonicalization Scheme {{RFC8785}}
   instead of a placeholder URL.
 
+* {{problem}} names the three deterministic encoding processes in common
+  use for CBOR (that of {{RFC8949}} Section 4.2.1, the length-first map
+  key ordering of its Section 4.2.3, and CBOR/c-42) and says why this
+  document steers protocols to the first. This replaces a paragraph on
+  JSON; the JSON example in {{examples}} remains.
+
 # Changes from Version 02
 {:removeinrfc}
 
@@ -626,4 +656,7 @@ The authors thank Amaury Chamayou for a detailed review that aligned this
 document's terminology, CDDL, and verification rules with {{RFC9995}},
 proposed the name core-deterministic, and compared the size of the
 parameter's values, Henk Birkholz for a review of its
-scope, motivation, and terminology, and Orie Steele for his review.
+scope, motivation, and terminology, Orie Steele for his review, Laurence
+Lundblade for asking that the document state the problem it solves, and
+Carsten Bormann for describing the deterministic encoding processes in use
+for CBOR.
