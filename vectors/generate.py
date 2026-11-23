@@ -22,8 +22,9 @@ sys.path.insert(0, str(HERE.parent / "lib" / "python"))
 import cose_det_enc as c  # noqa: E402
 
 L = c.LABEL_DETERMINISTIC_ENCODINGS
-URL = c.CORE_DETERMINISTIC
-OTHER_URL = "https://json-spec.example/deterministic"  # a URL the draft does not list
+ONE = c.CORE_DETERMINISTIC  # the integer 1: RFC 8949 Section 4.2.1
+URL_02 = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"  # what -02 listed for it
+OTHER_URL = "https://json-spec.example/deterministic"  # a URL the draft does not name
 
 
 def h(hexstr: str) -> bytes:
@@ -74,7 +75,8 @@ def emit_case(cid, description, value_cbor, content_type, hash_alg=-16, expect_p
 
 
 def reject_case(cid, description, value_cbor, content_type="application/cbor", hash_alg=-16):
-    """A value the emitter refuses: it decodes, but has no encoding under the URL."""
+    """A value the emitter refuses: it decodes, but has no encoding under RFC 8949
+    Section 4.2.1 in this reference."""
     value = c.decode(value_cbor)
     try:
         c.emit(value, content_type, hash_alg=hash_alg)
@@ -167,7 +169,9 @@ def build() -> dict:
                     h("a1 61 78 fb 7f f8 00 00 00 00 00 01")),
     ]
 
-    ok = header(alg=-7, hash=-16, ctype="application/cbor", enc=URL)
+    ok = header(alg=-7, hash=-16, ctype="application/cbor", enc=ONE)
+    assert ok.endswith(h("19 01 0f 01")), ok.hex()  # label 271, then the 1-byte integer 1
+    ok_long_head = ok[:-1] + h("18 01")  # the same integer 1 in a two-octet head
     mod_value = h("a2 61 62 02 61 61 02")  # {"b": 2, "a": 2}: a modified value
     dag_pre = h("a1 61 78 fb 3f f8 00 00 00 00 00 00")  # {"x": 1.5}, binary64 float
     f16_pre = h("a1 61 78 f9 3e 00")  # {"x": 1.5}, RFC 8949 Section 4.2.1
@@ -177,7 +181,7 @@ def build() -> dict:
         verify_case("verify-preimage", "Holds the preimage; digest matches", ok, ex_dig,
                     "verified", "preimage-digest-match", preimage=ex_pre),
         verify_case("verify-value", "Holds only the structured value; re-creates the preimage "
-                    "with the encoding the URL identifies", ok, ex_dig, "verified", "recreated-digest-match",
+                    "with the encoding the integer 1 identifies", ok, ex_dig, "verified", "recreated-digest-match",
                     value_cbor=ex_value),
         verify_case("verify-value-modified", "Holds a modified structured value", ok, ex_dig,
                     "failed", "recreated-digest-mismatch", value_cbor=mod_value),
@@ -196,29 +200,40 @@ def build() -> dict:
                     "preimage to hash the check fails",
                     header(alg=-7, hash=-16, ctype="application/cbor", enc=99), ex_dig,
                     "failed", "encoding-not-implemented", value_cbor=ex_value),
-        verify_case("verify-value-integer-1", "Holds only the value; the header carries the "
-                    "integer 1 an -00 producer writes, which is not the URL and is ignored",
-                    header(alg=-7, hash=-16, ctype="application/cbor", enc=1), ex_dig,
+        verify_case("verify-value-integer-1-long-head", "Holds only the value; the header "
+                    "carries the integer 1 in a two-octet head (0x1801), which is still the "
+                    "integer 1", ok_long_head, ex_dig, "verified", "recreated-digest-match",
+                    value_cbor=ex_value),
+        verify_case("verify-value-url-02", "Holds only the value; the header carries the URL "
+                    "that -02 listed for RFC 8949 Section 4.2.1, which is not the integer 1 "
+                    "and is ignored, and with no preimage to hash the check fails",
+                    header(alg=-7, hash=-16, ctype="application/cbor", enc=URL_02), ex_dig,
+                    "failed", "encoding-not-implemented", value_cbor=ex_value),
+        verify_case("verify-preimage-url-02", "Holds the preimage; the URL that -02 listed is "
+                    "ignored, and the RFC 9995 check passes",
+                    header(alg=-7, hash=-16, ctype="application/cbor", enc=URL_02), ex_dig,
+                    "verified", "preimage-digest-match", preimage=ex_pre),
+        verify_case("verify-value-float-1", "Holds only the value; the header carries the "
+                    "floating-point number 1.0 (0xf93c00), which is not the integer 1 and is "
+                    "ignored",
+                    header(alg=-7, hash=-16, ctype="application/cbor", enc=1.0), ex_dig,
+                    "failed", "encoding-not-implemented", value_cbor=ex_value),
+        verify_case("verify-value-true", "Holds only the value; the header carries the simple "
+                    "value true (0xf5), which is not the integer 1 and is ignored",
+                    header(alg=-7, hash=-16, ctype="application/cbor", enc=True), ex_dig,
                     "failed", "encoding-not-implemented", value_cbor=ex_value),
         verify_case("verify-value-dtrm-text", "Holds only the value; the header carries the "
-                    "text string \"dtrm\" an -01 producer writes, which is not the URL and "
-                    "is ignored",
+                    "text string \"dtrm\" an -01 producer writes, which is not the integer 1 "
+                    "and is ignored",
                     header(alg=-7, hash=-16, ctype="application/cbor", enc="dtrm"), ex_dig,
                     "failed", "encoding-not-implemented", value_cbor=ex_value),
-        verify_case("verify-value-info-page-url", "Holds only the value; the header carries "
-                    "the RFC Editor's information page for RFC 8949, which names the whole "
-                    "document with no section fragment, so it is not the listed URL and is "
-                    "ignored",
-                    header(alg=-7, hash=-16, ctype="application/cbor",
-                           enc="https://www.rfc-editor.org/info/rfc8949"), ex_dig,
-                    "failed", "encoding-not-implemented", value_cbor=ex_value),
         verify_case("verify-value-other-url-json", "Holds only a JSON value's decoded form; the "
-                    "header carries a URL this document does not list, with application/json, "
+                    "header carries a URL this document does not name, with application/json, "
                     "which a verifier that does not implement it ignores",
                     header(alg=-7, hash=-16, ctype="application/json", enc=OTHER_URL), ex_dig,
                     "failed", "encoding-not-implemented", value_cbor=ex_value),
         verify_case("verify-preimage-other-url-json", "Holds the preimage; a URL this document "
-                    "does not list is ignored, and the RFC 9995 check passes",
+                    "does not name is ignored, and the RFC 9995 check passes",
                     header(alg=-7, hash=-16, ctype="application/json", enc=OTHER_URL), ex_dig,
                     "verified", "preimage-digest-match", preimage=ex_pre),
         verify_case("verify-value-nan-payload", "Holds only a value whose NaN has a non-zero "
@@ -233,34 +248,34 @@ def build() -> dict:
                     "verified", "preimage-digest-match", preimage=ex_pre),
         verify_case("verify-nothing-held", "Holds neither the preimage nor the value: the "
                     "check fails", ok, ex_dig, "failed", "no-content"),
-        verify_case("verify-ctype-absent", "The CBOR URL without 259 fails before any "
+        verify_case("verify-ctype-absent", "The integer 1 without 259 fails before any "
                     "recomputation, even with a matching preimage",
-                    header(alg=-7, hash=-16, enc=URL), ex_dig, "failed", "content-type-absent",
+                    header(alg=-7, hash=-16, enc=ONE), ex_dig, "failed", "content-type-absent",
                     preimage=ex_pre),
-        verify_case("verify-ctype-absent-value", "The CBOR URL without 259, holding "
-                    "the value", header(alg=-7, hash=-16, enc=URL), ex_dig, "failed",
+        verify_case("verify-ctype-absent-value", "The integer 1 without 259, holding "
+                    "the value", header(alg=-7, hash=-16, enc=ONE), ex_dig, "failed",
                     "content-type-absent", value_cbor=ex_value),
-        verify_case("verify-ctype-json", "The CBOR URL paired with application/json "
+        verify_case("verify-ctype-json", "The integer 1 paired with application/json "
                     "(the draft's own example of a violation)",
-                    header(alg=-7, hash=-16, ctype="application/json", enc=URL), ex_dig, "failed",
+                    header(alg=-7, hash=-16, ctype="application/json", enc=ONE), ex_dig, "failed",
                     "content-type-mismatch", preimage=ex_pre),
         verify_case("verify-ctype-params-case", "A 259 media type with a parameter and in mixed "
-                    "case still matches", header(alg=-7, hash=-16, ctype="Application/CBOR; x=y", enc=URL),
+                    "case still matches", header(alg=-7, hash=-16, ctype="Application/CBOR; x=y", enc=ONE),
                     ex_dig, "verified", "recreated-digest-match", value_cbor=ex_value),
         verify_case("verify-ctype-suffix", "A +cbor structured syntax suffix matches",
-                    header(alg=-7, hash=-16, ctype="application/swid+cbor", enc=URL), ex_dig,
+                    header(alg=-7, hash=-16, ctype="application/swid+cbor", enc=ONE), ex_dig,
                     "verified", "recreated-digest-match", value_cbor=ex_value),
         verify_case("verify-ctype-suffix-sd-cwt", "A +sd-cwt structured syntax suffix matches",
-                    header(alg=-7, hash=-16, ctype="application/example+sd-cwt", enc=URL), ex_dig,
+                    header(alg=-7, hash=-16, ctype="application/example+sd-cwt", enc=ONE), ex_dig,
                     "verified", "preimage-digest-match", preimage=ex_pre),
         verify_case("verify-ctype-not-suffix", "A subtype that only begins with cbor is not a "
-                    "match", header(alg=-7, hash=-16, ctype="application/cbor-x", enc=URL), ex_dig,
+                    "match", header(alg=-7, hash=-16, ctype="application/cbor-x", enc=ONE), ex_dig,
                     "failed", "content-type-mismatch", preimage=ex_pre),
         verify_case("verify-ctype-cf-cbor", "Content-Format 60 (application/cbor) matches",
-                    header(alg=-7, hash=-16, ctype=60, enc=URL), ex_dig, "verified",
+                    header(alg=-7, hash=-16, ctype=60, enc=ONE), ex_dig, "verified",
                     "recreated-digest-match", value_cbor=ex_value),
         verify_case("verify-ctype-cf-json", "Content-Format 50 (application/json) does not match",
-                    header(alg=-7, hash=-16, ctype=50, enc=URL), ex_dig, "failed",
+                    header(alg=-7, hash=-16, ctype=50, enc=ONE), ex_dig, "failed",
                     "content-type-mismatch", preimage=ex_pre),
         verify_case("verify-ctype-unknown-encoding-json", "An encoding value the verifier does "
                     "not implement is ignored, including the check against 259",
@@ -274,28 +289,31 @@ def build() -> dict:
                     "RFC 8949 Section 4.2.1 re-creates the shortest form the producer hashed",
                     ok, sha256(f16_pre), "verified", "recreated-digest-match", value_cbor=dag_pre),
         verify_case("verify-binary64-hashed", "The producer hashed binary64 floats (another "
-                    "encoding) but claimed the CBOR URL", ok, sha256(dag_pre), "failed",
+                    "encoding) but claimed the integer 1", ok, sha256(dag_pre), "failed",
                     "recreated-digest-mismatch", value_cbor=dag_pre),
         verify_case("verify-length-first-hashed", "The producer hashed length-first key order "
-                    "(RFC 8949 Section 4.2.3) but claimed the CBOR URL", ok, sha256(len_first_pre),
+                    "(RFC 8949 Section 4.2.3) but claimed the integer 1", ok, sha256(len_first_pre),
                     "failed", "recreated-digest-mismatch", value_cbor=len_first_pre),
         verify_case("verify-length-first-preimage", "The same envelope, holding the "
                     "length-first preimage itself: the RFC 9995 check passes",
                     ok, sha256(len_first_pre), "verified", "preimage-digest-match",
                     preimage=len_first_pre),
         verify_case("verify-sha384", "SHA-384 (-43) as payload-hash-alg",
-                    header(alg=-7, hash=-43, ctype="application/cbor", enc=URL),
+                    header(alg=-7, hash=-43, ctype="application/cbor", enc=ONE),
                     hashlib.sha384(ex_pre).digest(), "verified", "recreated-digest-match",
                     value_cbor=ex_value),
         verify_case("verify-hash-alg-unknown", "A payload-hash-alg the verifier does not "
                     "implement: the check fails",
-                    header(alg=-7, hash=-999, ctype="application/cbor", enc=URL),
+                    header(alg=-7, hash=-999, ctype="application/cbor", enc=ONE),
                     ex_dig, "failed", "hash-alg-not-implemented", preimage=ex_pre),
     ]
     return {
         "description": "Vectors for draft-mih-sokolov-cose-deterministic-encodings. Header "
                        "label 271 is the value the draft suggests for TBD_1; it is not "
-                       "assigned. 'protected' is the serialized protected header map. A "
+                       "assigned. Its value is the integer 1, which identifies the Core "
+                       "Deterministic Encoding Requirements of RFC 8949 Section 4.2.1; any other "
+                       "value, including the URL that -02 listed, is ignored. 'protected' is the "
+                       "serialized protected header map. A "
                        "verifier holding 'value_cbor' decodes it and re-creates the preimage; "
                        "one holding 'preimage' hashes it. Each check is 'verified' or "
                        "'failed', with a reason code. Each 'reject' value holds a NaN "

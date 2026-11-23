@@ -16,7 +16,15 @@ import cose_det_enc as c
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTORS = json.loads((ROOT / "vectors" / "vectors.json").read_text())
-DRAFT = (ROOT / "draft-mih-sokolov-cose-deterministic-encodings-02.md").read_text()
+DRAFT = (ROOT / "draft-mih-sokolov-cose-deterministic-encodings-03.md").read_text()
+# The URL that -02 listed for RFC 8949 Section 4.2.1; -03 identifies that
+# encoding by the integer 1.
+URL_02 = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
+
+
+def phrase(text: str) -> str:
+    """A regular expression for text, with any whitespace between its words."""
+    return r"\s+".join(re.escape(w) for w in text.split())
 
 
 class DraftExample(unittest.TestCase):
@@ -71,23 +79,41 @@ class Vectors(unittest.TestCase):
 
 class Producer(unittest.TestCase):
     def test_refuses_json_pairing(self):
-        # Consistency with preimage-content-type: a producer MUST NOT pair the CBOR URL with application/json.
+        # Consistency with preimage-content-type: a producer MUST NOT pair the integer 1 with application/json.
         with self.assertRaises(ValueError):
             c.emit({"a": 1}, "application/json")
 
-    def test_header_value_is_the_url(self):
-        e = c.emit({"a": 1}, "application/cbor")
-        self.assertEqual(c.decode(e.protected).get(c.LABEL_DETERMINISTIC_ENCODINGS),
-                         c.CORE_DETERMINISTIC)
+    def test_refuses_values_other_than_1(self):
+        for other in (True, 1.0, URL_02, "dtrm", 2):
+            with self.subTest(repr(other)), self.assertRaises(ValueError):
+                c.emit({"a": 1}, "application/cbor", encoding=other)
 
-    def test_url_matches_draft_text(self):
-        # The URL is read from the draft.
-        m = re.search(r"The URL is:\s+~~~\n(\S+)\n~~~", DRAFT)
-        self.assertIsNotNone(m, "URL block not found in the draft")
-        self.assertEqual(m.group(1), c.CORE_DETERMINISTIC)
+    def test_header_value_is_the_integer_1(self):
+        e = c.emit({"a": 1}, "application/cbor")
+        got = c.decode(e.protected).get(c.LABEL_DETERMINISTIC_ENCODINGS)
+        self.assertIs(type(got), int)
+        self.assertEqual(got, 1)
+        # Label 271 (19 01 0f) sorts last; its value is the 1-byte integer 01.
+        self.assertEqual(e.protected[-4:].hex(), "19010f01")
+
+    def test_value_matches_draft_text(self):
+        # The CDDL and the example in the draft carry the integer 1.
+        self.assertRegex(DRAFT, phrase("? &(deterministic_encodings: TBD_1) => 1 / tstr,"))
+        m = re.search(r"/ deterministic encodings / TBD_1: (\S+?),", DRAFT)
+        self.assertIsNotNone(m, "example header line not found in the draft")
+        self.assertEqual(m.group(1), str(c.CORE_DETERMINISTIC))
+
+    def test_sizes_match_draft_text(self):
+        # The draft compares the integer with the URL that -02 listed.
+        m = re.search(phrase("The integer takes") + r"\s+(\d+)\s+" + phrase("byte; the URL of that section on "
+                      "the RFC Editor's site would take") + r"\s+(\d+)\s+bytes", DRAFT)
+        self.assertIsNotNone(m, "size sentence not found in the draft")
+        self.assertEqual(int(m.group(1)), len(c.encode_core_deterministic(c.CORE_DETERMINISTIC)))
+        self.assertEqual(int(m.group(2)), len(c.encode_core_deterministic(URL_02)))
 
     def test_dtrm_text_not_recognized(self):
-        # The text string "dtrm" an -01 producer writes is not the URL.
+        # The text string "dtrm" an -01 producer writes is not the integer 1.
+        self.assertFalse(c.is_implemented("dtrm"))
         self.assertFalse(c.content_type_matches("dtrm", "application/cbor"))
 
 
@@ -155,14 +181,25 @@ class Floats(unittest.TestCase):
 
 
 class Verifier(unittest.TestCase):
-    def test_header_integer_1_not_recognized(self):
-        # The integer 1 an -00 producer writes is not the URL: the verifier ignores
-        # it, and holding only a value it has no preimage to hash, so the check fails.
-        prot = c.encode_core_deterministic({1: -7, 258: -16, 259: "application/json",
-                                            c.LABEL_DETERMINISTIC_ENCODINGS: 1})
-        got = c.verify(prot, b"\x00" * 32, value={"a": 1}, has_value=True)
+    def test_only_the_integer_1_is_implemented(self):
+        self.assertTrue(c.is_implemented(1))
+        self.assertTrue(c.content_type_matches(1, "application/cbor"))
+        # true and 1.0 compare equal to 1 in Python, but are other CBOR data items.
+        for other in (True, 1.0, "1", URL_02, "dtrm", 2, 0, -1, None, b"\x01"):
+            with self.subTest(repr(other)):
+                self.assertFalse(c.is_implemented(other))
+                self.assertFalse(c.content_type_matches(other, "application/cbor"))
+
+    def test_url_02_ignored(self):
+        # The URL that -02 listed is not the integer 1: the verifier ignores it, and
+        # holding only a value it has no preimage to hash, so the check fails.
+        ok = c.emit({"a": 1}, "application/cbor")
+        prot = c.encode_core_deterministic({1: -7, 258: -16, 259: "application/cbor",
+                                            c.LABEL_DETERMINISTIC_ENCODINGS: URL_02})
+        got = c.verify(prot, ok.payload, value={"a": 1}, has_value=True)
         self.assertEqual((got.outcome, got.reason), (c.FAILED, "encoding-not-implemented"))
-        self.assertFalse(c.content_type_matches(1, "application/cbor"))
+        got = c.verify(prot, ok.payload, preimage=ok.preimage)
+        self.assertEqual((got.outcome, got.reason), (c.VERIFIED, "preimage-digest-match"))
 
 
 class Decoder(unittest.TestCase):
