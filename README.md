@@ -7,16 +7,17 @@ When that content is structured, more than one deterministic serialization of it
 may be in use, and the Hash Envelope does not identify which one produced the
 hashed bytes — so a verifier cannot reliably recompute the hash. This draft
 defines one Hash Envelope protected-header parameter
-(`deterministic-encodings`), naming the deterministic encoding a producer
-applied before hashing a Hash Envelope payload by a URL, and lists one URL, for
-CBOR content: the URL of RFC 8949 §4.2.1, the Core Deterministic Encoding
-Requirements, with its section fragment:
-`https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1`.
-A URL selects exactly one encoding, so a document that defines several is named
-with a section fragment. Other URLs are named by the application profile that
-uses the parameter; no registry is needed. A verifier that does not implement the
-identified encoding ignores the parameter and checks the payload as RFC 9995
-describes, so the check is verified or failed, with no other outcome. The draft
+(`deterministic-encodings`), identifying the deterministic encoding a producer
+applied before hashing a Hash Envelope payload. Its value is the integer `1` or
+a URL (CDDL `1 / tstr`). The integer 1 identifies the Core Deterministic
+Encoding Requirements of RFC 8949 §4.2.1, in 1 byte where the URL of that
+section would take 59. Any other encoding is identified by a URL that the
+application profile using the parameter names; a URL selects exactly one
+encoding, so a document that defines several is named with a section fragment.
+The draft creates no registry and defines no other integer. A verifier that does
+not implement the identified encoding ignores the parameter and checks the
+payload as RFC 9995 describes, so the check is verified or failed, with no other
+outcome. The draft
 extends the Hash Envelope through its existing extension point and changes
 nothing in RFC 9995.
 
@@ -68,4 +69,4 @@ python3 -m unittest discover -s lib/python
 ```
 
 Current draft:
-[`draft-mih-sokolov-cose-deterministic-encodings-02`](draft-mih-sokolov-cose-deterministic-encodings-02.md).
+[`draft-mih-sokolov-cose-deterministic-encodings-03`](draft-mih-sokolov-cose-deterministic-encodings-03.md).

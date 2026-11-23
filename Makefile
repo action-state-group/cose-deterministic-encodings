@@ -4,7 +4,7 @@
 #   gem install kramdown-rfc
 #   python3 -m pip install xml2rfc
 
-DRAFT   = draft-mih-sokolov-cose-deterministic-encodings-02
+DRAFT   = draft-mih-sokolov-cose-deterministic-encodings-03
 XML2RFC ?= xml2rfc
 KDRFC   ?= kramdown-rfc
 
@@ -26,10 +26,17 @@ rebuild:
 	rm -f $(DRAFT).xml $(DRAFT).txt
 	$(MAKE) all
 
+# kramdown-rfc writes a <?line N?> processing instruction where each part of the
+# Markdown source begins.  idnits3 warns about them (LINE_PI), and
+# `xml2rfc --remove-pis` does not remove them, so they are deleted from the .xml,
+# each standing on its own line; the build fails if one is left.  CI does the
+# same (.github/workflows/build.yml).
 $(DRAFT).xml: $(DRAFT).md
 	$(KDRFC) $(DRAFT).md > .$(DRAFT).v2.xml
 	$(XML2RFC) --v2v3 .$(DRAFT).v2.xml -o $(DRAFT).xml
 	@rm -f .$(DRAFT).v2.xml
+	sed -i '/^[[:space:]]*<?line [0-9]*?>[[:space:]]*$$/d' $(DRAFT).xml
+	@if grep -n '<?line' $(DRAFT).xml; then echo "a <?line?> PI is left in $(DRAFT).xml"; rm -f $(DRAFT).xml; exit 1; fi
 
 $(DRAFT).txt: $(DRAFT).xml
 	$(XML2RFC) --text --v3 $(DRAFT).xml -o $(DRAFT).txt
