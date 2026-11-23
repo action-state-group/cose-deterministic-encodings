@@ -16,7 +16,7 @@ import cose_det_enc as c
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTORS = json.loads((ROOT / "vectors" / "vectors.json").read_text())
-DRAFT = (ROOT / "draft-mih-sokolov-cose-deterministic-encodings-03.md").read_text()
+DRAFT = (ROOT / "draft-mih-sokolov-cose-deterministic-encodings-04.md").read_text()
 # The URL that -02 listed for RFC 8949 Section 4.2.1; -03 identifies that
 # encoding by the integer 1.
 URL_02 = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
