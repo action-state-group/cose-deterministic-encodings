@@ -6,7 +6,8 @@ draft-mih-sokolov-cose-deterministic-encodings.  It builds the protected header
 and payload of a COSE Hash Envelope (RFC 9995) whose preimage is a structured
 value encoded under the Core Deterministic Encoding Requirements (RFC 8949
 Section 4.2.1), and checks a content binding, reporting verified or failed
-as the draft's "Producer and Verifier Behavior" section specifies.
+as the draft's "Producer and Verifier Behavior" section specifies.  The
+header value for that encoding is the integer 1.
 
 Signing is out of scope: the header parameter concerns the content binding,
 which the draft keeps independent of signature validity.
@@ -29,9 +30,11 @@ LABEL_PREIMAGE_CONTENT_TYPE = 259
 LABEL_PAYLOAD_LOCATION = 260
 LABEL_DETERMINISTIC_ENCODINGS = 271  # TBD_1, suggested value; not assigned
 
-# The one URL the draft lists: the URL of RFC 8949 Section 4.2.1, the Core
-# Deterministic Encoding Requirements, with its section fragment.  It is compared as a string and never dereferenced.
-CORE_DETERMINISTIC = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
+# The value the draft defines for CBOR content: the integer 1 identifies the
+# Core Deterministic Encoding Requirements of RFC 8949 Section 4.2.1.  Any
+# other encoding is identified by a URL that an application profile names;
+# this reference implements none.
+CORE_DETERMINISTIC = 1
 
 # The check of a content binding succeeds or fails; the draft adds no other
 # outcome.
@@ -45,8 +48,8 @@ HASH_ALGS = {
     -44: "sha512",
 }
 
-# Applicable Content Types of the encoding that URL identifies (the draft's
-# consistency section).
+# Applicable Content Types of the encoding that the integer 1 identifies (the
+# draft's consistency section).
 CORE_DETERMINISTIC_MEDIA_TYPES = frozenset({
     "application/cbor",
     "application/cbor-seq",
@@ -324,12 +327,23 @@ def encode_structured(value: Any) -> bytes:
 ENCODINGS = {CORE_DETERMINISTIC: encode_structured}
 
 
+def is_implemented(encoding: Any) -> bool:
+    """True when a deterministic-encodings value identifies an encoding this
+    reference implements.
+
+    The type is compared exactly.  In Python True == 1 and 1.0 == 1, and both
+    hash as 1, but the CBOR data items true and 1.0 are not the integer 1;
+    neither is a text string, such as "dtrm" or a URL.
+    """
+    return type(encoding) in (int, str) and encoding in ENCODINGS
+
+
 # --- Applicable Content Types (the draft's consistency check) ------------
 
 
-def content_type_matches(encoding: str, content_type: Any) -> bool:
+def content_type_matches(encoding: Any, content_type: Any) -> bool:
     """True when a 259 value matches the Applicable Content Types of encoding."""
-    if not isinstance(encoding, str) or encoding != CORE_DETERMINISTIC:
+    if type(encoding) is not int or encoding != CORE_DETERMINISTIC:
         return False
     if isinstance(content_type, bool):
         return False
@@ -363,13 +377,13 @@ class Emitted:
 
 
 def emit(value: Any, content_type: Any, *, alg: int = -7, hash_alg: int = -16,
-         encoding: str = CORE_DETERMINISTIC,
+         encoding: int | str = CORE_DETERMINISTIC,
          label: int = LABEL_DETERMINISTIC_ENCODINGS) -> Emitted:
     """Encode value, hash it, and build the Hash Envelope protected header."""
     if hash_alg not in HASH_ALGS:
         raise ValueError(f"hash algorithm {hash_alg} not implemented")
-    if encoding not in ENCODINGS:
-        raise ValueError(f"encoding {encoding} not implemented")
+    if not is_implemented(encoding):
+        raise ValueError(f"encoding {encoding!r} not implemented")
     if not content_type_matches(encoding, content_type):
         # Consistency with preimage-content-type: a producer MUST NOT emit this pairing.
         raise ValueError("content type is not an Applicable Content Type of the encoding")
@@ -410,10 +424,11 @@ def verify(protected: bytes, payload: bytes, *, preimage: bytes | None = None,
     encoding = header.get(label)
     has_ctype = header.has(LABEL_PREIMAGE_CONTENT_TYPE)
     ctype = header.get(LABEL_PREIMAGE_CONTENT_TYPE)
-    # Only the URL the draft lists is implemented.  Any other value, including
-    # the integer 1 an -00 producer writes and the text string "dtrm" an -01
-    # producer writes, is ignored, and the check is the RFC 9995 one.
-    recognized = isinstance(encoding, str) and encoding in ENCODINGS
+    # Only the integer 1 is implemented.  Any other value is ignored, and the
+    # check is the RFC 9995 one: the URL that -02 listed for the same
+    # encoding, the text string "dtrm" an -01 producer writes, an integer
+    # other than 1, or a value of another type, such as true or 1.0.
+    recognized = is_implemented(encoding)
 
     # Consistency with preimage-content-type, for an encoding this verifier
     # implements: this check comes first.

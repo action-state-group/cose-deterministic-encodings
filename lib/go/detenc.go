@@ -8,7 +8,8 @@
 // 9995) whose preimage is a structured value encoded under the Core
 // Deterministic Encoding Requirements (RFC 8949 Section 4.2.1), and checks a
 // content binding, reporting verified or failed as the draft's "Producer and
-// Verifier Behavior" section specifies. Signing is out of scope.
+// Verifier Behavior" section specifies. The header value for that encoding is
+// the integer 1. Signing is out of scope.
 //
 // The header label is TBD_1 in the draft; 271 is the value it suggests to
 // IANA and is the default here. It is not an assigned value.
@@ -37,11 +38,19 @@ const (
 	LabelDeterministicEncodings = 271 // TBD_1, suggested value; not assigned
 )
 
-// CoreDeterministic is the one URL the draft lists: the URL of RFC 8949
-// Section 4.2.1, the Core Deterministic Encoding Requirements, with its
-// section fragment. It is compared as a string
-// and never dereferenced.
-const CoreDeterministic = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
+// CoreDeterministic is the value the draft defines for CBOR content: the
+// integer 1 identifies the Core Deterministic Encoding Requirements of RFC
+// 8949 Section 4.2.1. Any other encoding is identified by a URL that an
+// application profile names; this package implements none.
+const CoreDeterministic = 1
+
+// IsCoreDeterministic reports whether a decoded deterministic-encodings value
+// is the integer 1. The float64 1.0, the bool true and a text string, such as
+// "dtrm" or a URL, are other data items.
+func IsCoreDeterministic(v any) bool {
+	i, ok := v.(Int)
+	return ok && !i.Neg && i.N == CoreDeterministic
+}
 
 // Content-binding outcomes: the check succeeds or fails, and the draft adds
 // no other outcome.
@@ -551,9 +560,10 @@ var ContentFormats = map[uint64]string{
 }
 
 // ContentTypeMatches reports whether a 259 value matches the Applicable
-// Content Types of the encoding.
-func ContentTypeMatches(encoding string, contentType any) bool {
-	if encoding != CoreDeterministic {
+// Content Types of the encoding, given as a decoded deterministic-encodings
+// value.
+func ContentTypeMatches(encoding any, contentType any) bool {
+	if !IsCoreDeterministic(encoding) {
 		return false
 	}
 	var media string
@@ -611,12 +621,13 @@ type Emitted struct {
 }
 
 // Emit encodes value with the Core Deterministic Encoding, hashes it with hashAlg, and
-// builds the serialized protected header (alg, 258, 259 and label).
+// builds the serialized protected header (alg, 258, 259, and label with the
+// integer 1).
 func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted, error) {
 	if hasher(hashAlg) == nil {
 		return nil, fmt.Errorf("detenc: hash algorithm %d not implemented", hashAlg)
 	}
-	if !ContentTypeMatches(CoreDeterministic, contentType) {
+	if !ContentTypeMatches(I(CoreDeterministic), contentType) {
 		// Consistency with preimage-content-type: a producer MUST NOT emit this pairing.
 		return nil, errors.New("detenc: content type is not an Applicable Content Type of the encoding")
 	}
@@ -628,7 +639,7 @@ func Emit(value any, contentType any, alg, hashAlg int64, label int64) (*Emitted
 		{I(LabelAlg), I(alg)},
 		{I(LabelPayloadHashAlg), I(hashAlg)},
 		{I(LabelPreimageContentType), contentType},
-		{I(label), CoreDeterministic},
+		{I(label), I(CoreDeterministic)},
 	})
 	if err != nil {
 		return nil, err
@@ -673,11 +684,11 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 	}
 	encRaw, hasEncoding := header.Get(label)
 	ctype, hasCtype := header.Get(LabelPreimageContentType)
-	// Only the URL the draft lists is implemented. Any other value, including
-	// the integer 1 an -00 producer writes and the text string "dtrm" an -01
-	// producer writes, is ignored, and the check is the RFC 9995 one.
-	enc, isText := encRaw.(string)
-	recognized := hasEncoding && isText && enc == CoreDeterministic
+	// Only the integer 1 is implemented. Any other value is ignored, and the
+	// check is the RFC 9995 one: the URL that -02 listed for the same
+	// encoding, the text string "dtrm" an -01 producer writes, an integer
+	// other than 1, or a value of another type, such as true or 1.0.
+	recognized := hasEncoding && IsCoreDeterministic(encRaw)
 
 	// Consistency with preimage-content-type, for an encoding this verifier
 	// implements: this check comes first.
@@ -685,7 +696,7 @@ func Verify(protected, payload []byte, held Held, label int64) (Result, error) {
 		if !hasCtype {
 			return Result{Failed, "content-type-absent"}, nil
 		}
-		if !ContentTypeMatches(enc, ctype) {
+		if !ContentTypeMatches(encRaw, ctype) {
 			return Result{Failed, "content-type-mismatch"}, nil
 		}
 	}

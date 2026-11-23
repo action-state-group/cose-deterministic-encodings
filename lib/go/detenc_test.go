@@ -9,8 +9,22 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"strconv"
 	"testing"
 )
+
+// url02 is the URL that -02 listed for RFC 8949 Section 4.2.1; -03 identifies
+// that encoding by the integer 1.
+const url02 = "https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2.1"
+
+func readDraft(t *testing.T) []byte {
+	t.Helper()
+	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-03.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
 
 type vectors struct {
 	HeaderLabel int64 `json:"header_label"`
@@ -147,10 +161,7 @@ func TestVerifyVectors(t *testing.T) {
 
 // The draft's example digest, read from the draft text.
 func TestDraftExample(t *testing.T) {
-	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-02.md")
-	if err != nil {
-		t.Fatal(err)
-	}
+	src := readDraft(t)
 	m := regexp.MustCompile("7-octet preimage\\s+`([0-9a-f]+)`, whose SHA-256 digest is\\s+`([0-9a-f]{64})`").FindSubmatch(src)
 	if m == nil {
 		t.Fatal("example preimage/digest not found in the draft")
@@ -195,11 +206,11 @@ func TestDecoderRejects(t *testing.T) {
 
 func TestProducerRefusesJSON(t *testing.T) {
 	if _, err := Emit(Map{{"a", I(1)}}, "application/json", -7, -16, LabelDeterministicEncodings); err == nil {
-		t.Fatal("emitted the CBOR URL with application/json")
+		t.Fatal("emitted the integer 1 with application/json")
 	}
 }
 
-func TestHeaderValueIsTextString(t *testing.T) {
+func TestHeaderValueIsInteger1(t *testing.T) {
 	e, err := Emit(Map{{"a", I(1)}}, "application/cbor", -7, -16, LabelDeterministicEncodings)
 	if err != nil {
 		t.Fatal(err)
@@ -208,42 +219,91 @@ func TestHeaderValueIsTextString(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := h.(Map).Get(LabelDeterministicEncodings); got != CoreDeterministic {
-		t.Fatalf("header value %#v, want %q", got, CoreDeterministic)
+	if got, _ := h.(Map).Get(LabelDeterministicEncodings); got != I(1) {
+		t.Fatalf("header value %#v, want the integer 1", got)
+	}
+	// Label 271 (19 01 0f) sorts last; its value is the 1-byte integer 01.
+	if tail := hex.EncodeToString(e.Protected[len(e.Protected)-4:]); tail != "19010f01" {
+		t.Fatalf("protected header ends %s, want 19010f01", tail)
 	}
 }
 
-// The URL is read from the draft, where it is shown on two lines.
-func TestURLMatchesDraftText(t *testing.T) {
-	src, err := os.ReadFile("../../draft-mih-sokolov-cose-deterministic-encodings-02.md")
+// The CDDL and the example in the draft carry the integer 1.
+func TestValueMatchesDraftText(t *testing.T) {
+	src := readDraft(t)
+	if !regexp.MustCompile(`\? &\(deterministic_encodings: TBD_1\) => 1 / tstr,`).Match(src) {
+		t.Fatal("CDDL member with 1 / tstr not found in the draft")
+	}
+	m := regexp.MustCompile(`/ deterministic encodings / TBD_1: (\S+?),`).FindSubmatch(src)
+	if m == nil {
+		t.Fatal("example header line not found in the draft")
+	}
+	if got := string(m[1]); got != strconv.Itoa(CoreDeterministic) {
+		t.Fatalf("draft example value %q, code %d", got, CoreDeterministic)
+	}
+}
+
+// The draft compares the integer with the URL that -02 listed.
+func TestSizesMatchDraftText(t *testing.T) {
+	m := regexp.MustCompile(`The integer\s+takes\s+(\d+)\s+byte;\s+the\s+URL\s+of\s+that\s+section\s+on\s+` +
+		`the\s+RFC\s+Editor's\s+site\s+would\s+take\s+(\d+)\s+bytes`).FindSubmatch(readDraft(t))
+	if m == nil {
+		t.Fatal("size sentence not found in the draft")
+	}
+	one, err := EncodeCoreDeterministic(I(CoreDeterministic))
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := regexp.MustCompile("The URL is:\\s+~~~\n(\\S+)\n~~~").FindSubmatch(src)
-	if m == nil {
-		t.Fatal("URL block not found in the draft")
+	url, err := EncodeCoreDeterministic(url02)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := string(m[1]); got != CoreDeterministic {
-		t.Fatalf("draft URL %q, code %q", got, CoreDeterministic)
+	if string(m[1]) != strconv.Itoa(len(one)) || string(m[2]) != strconv.Itoa(len(url)) {
+		t.Fatalf("draft says %s and %s bytes, code gives %d and %d", m[1], m[2], len(one), len(url))
 	}
 }
 
-// The integer 1 an -00 producer writes is not the URL: the verifier ignores it,
-// and holding only a value it has no preimage to hash, so the check fails.
-func TestHeaderInteger1NotRecognized(t *testing.T) {
+// Only the integer 1 is implemented; the float64 1.0, the bool true and text
+// strings are other data items.
+func TestOnlyInteger1Implemented(t *testing.T) {
+	if !IsCoreDeterministic(I(1)) || !ContentTypeMatches(I(1), "application/cbor") {
+		t.Fatal("the integer 1 is not implemented")
+	}
+	for _, other := range []any{1.0, true, "1", url02, "dtrm", I(2), I(0), I(-1), nil, []byte{1}, 1} {
+		if IsCoreDeterministic(other) || ContentTypeMatches(other, "application/cbor") {
+			t.Errorf("%#v taken for the integer 1", other)
+		}
+	}
+}
+
+// The URL that -02 listed is not the integer 1: the verifier ignores it, and
+// holding only a value it has no preimage to hash, so the check fails.
+func TestURL02Ignored(t *testing.T) {
+	val := Map{{"a", I(1)}}
+	ok, err := Emit(val, "application/cbor", -7, -16, LabelDeterministicEncodings)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prot, err := EncodeCoreDeterministic(Map{
 		{I(LabelAlg), I(-7)}, {I(LabelPayloadHashAlg), I(-16)},
-		{I(LabelPreimageContentType), "application/json"}, {I(LabelDeterministicEncodings), I(1)},
+		{I(LabelPreimageContentType), "application/cbor"}, {I(LabelDeterministicEncodings), url02},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := Verify(prot, make([]byte, 32), Held{Value: Map{{"a", I(1)}}, HasValue: true}, LabelDeterministicEncodings)
+	got, err := Verify(prot, ok.Payload, Held{Value: val, HasValue: true}, LabelDeterministicEncodings)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got != (Result{Failed, "encoding-not-implemented"}) {
-		t.Fatalf("got %v", got)
+		t.Fatalf("holding the value: got %v", got)
+	}
+	got, err = Verify(prot, ok.Payload, Held{Preimage: ok.Preimage}, LabelDeterministicEncodings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != (Result{Verified, "preimage-digest-match"}) {
+		t.Fatalf("holding the preimage: got %v", got)
 	}
 }
 
