@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Build draft-mih-sokolov-cose-deterministic-encodings from the
-# kramdown-rfc source. Toolchain (one-time):
-#   gem install kramdown-rfc
-#   python3 -m pip install xml2rfc
+# kramdown-rfc source. Toolchain (one-time), the versions CI pins in
+# .github/workflows/build.yml; other versions can render differently and fail its diff:
+#   gem install kramdown-rfc -v 1.7.43
+#   python3 -m pip install xml2rfc==3.35.0
 
 DRAFT   = draft-mih-sokolov-cose-deterministic-encodings-04
 XML2RFC ?= xml2rfc

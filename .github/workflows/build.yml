@@ -17,8 +17,10 @@
 # .xml, as the Makefile does, and fails if one is left.
 name: build
 
+# A push to a PR branch is covered by its pull_request run, so push runs only on main.
 on:
   push:
+    branches: [main]
     paths: ["draft-*.md", "Makefile", ".refcache/**", ".github/workflows/build.yml"]
   pull_request:
     paths: ["draft-*.md", "Makefile", ".refcache/**", ".github/workflows/build.yml"]
@@ -26,22 +28,31 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels that PR's earlier run. A main run gets a group of its own (its
+# run id), since even with cancel-in-progress false GitHub cancels a pending run in a shared group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: "3.3" }
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
 
+      # Pinned, so a tool release cannot change the rendered output and turn every open PR
+      # red (runs 36455265138 and 43350281210). Bump these in a PR of their own.
       - name: install toolchain
         run: |
-          gem install kramdown-rfc
-          python -m pip install xml2rfc
+          gem install kramdown-rfc -v 1.7.43
+          python -m pip install xml2rfc==3.35.0
 
       - name: build draft to temp + diff against tracked artifacts
         working-directory: .
