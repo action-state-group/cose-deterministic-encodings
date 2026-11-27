@@ -3,8 +3,10 @@
 # that vectors/vectors.json is what vectors/generate.py produces.
 name: impl
 
+# A push to a PR branch is covered by its pull_request run, so push runs only on main.
 on:
   push:
+    branches: [main]
     paths: ["lib/**", "vectors/**", "draft-*.md", ".github/workflows/impl.yml"]
   pull_request:
     paths: ["lib/**", "vectors/**", "draft-*.md", ".github/workflows/impl.yml"]
@@ -12,12 +14,19 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels that PR's earlier run. A main run gets a group of its own (its
+# run id), since even with cancel-in-progress false GitHub cancels a pending run in a shared group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   python:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - name: vectors are current
         run: python3 vectors/generate.py --check
@@ -26,9 +35,10 @@ jobs:
 
   go:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with: { go-version: "1.22" }
       - name: vet and test
         working-directory: lib/go
